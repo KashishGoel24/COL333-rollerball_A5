@@ -5,6 +5,9 @@ INCLUDES=-Iinclude #-I/opt/homebrew/opt/openssl@1.1/include/
 #LIBPATH=-L/opt/homebrew/opt/openssl@1.1/lib/
 #LIBS=-lcrypto -lssl
 
+dbg_board: src/debug_board.cpp 
+	$(CC) $(CFLAGS) $(INCLUDES) src/game.cpp src/debug_board.cpp -o bin/debug_board
+
 all: server client
 
 server: src/server.cpp
