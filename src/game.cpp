@@ -61,10 +61,60 @@ std::unordered_set<U16> construct_bottom_bishop_moves(U8 p0) {
     std::unordered_set<U16> bishop_moves;
 
     // sanest way I see to make this is by bruteforce
+    
+    // top right - move back
+    if (p0 < 6 || p0 == 13) {
+        bishop_moves.insert(move(p0, p0+pos(0,1)+pos(1,0)));
+    }
+    // bottom right - move back
+    if (p0 > 6) {
+        bishop_moves.insert(move(p0, p0-pos(0,1)+pos(1,0)));
+    }
 
-    bishop_moves.insert(move(p0, pos(getx(p0)-1,0)));
-    bishop_moves.insert(move(p0, pos(getx(p0)-1,1)));
-    if (p0 == 10) bishop_moves.insert(move(p0, 17));
+    // top left - forward / reflections
+    if (p0 == 1) {
+        bishop_moves.insert(move(p0, pos(0,1)));
+        bishop_moves.insert(move(p0, pos(1,2)));
+    }
+    else if (p0 == 2) {
+        bishop_moves.insert(move(p0, pos(1,1)));
+        bishop_moves.insert(move(p0, pos(0,2)));
+        bishop_moves.insert(move(p0, pos(1,3)));
+    }
+    else if (p0 == 3) {
+        bishop_moves.insert(move(p0, pos(2,1)));
+        bishop_moves.insert(move(p0, pos(1,2)));
+        bishop_moves.insert(move(p0, pos(0,3)));
+        bishop_moves.insert(move(p0, pos(1,4)));
+        bishop_moves.insert(move(p0, pos(2,5)));
+        bishop_moves.insert(move(p0, pos(3,6)));
+    }
+    else if (p0 == 4 || p0 == 5) {
+        bishop_moves.insert(move(p0, p0-pos(2,0)));
+        bishop_moves.insert(move(p0, p0+pos(0,1)-pos(1,0)));
+    }
+    else if (p0 == 6) {
+        bishop_moves.insert(move(p0, pos(5,1)));
+    }
+    else if (p0 == 10) {
+        bishop_moves.insert(move(p0, pos(1,0)));
+        bishop_moves.insert(move(p0, pos(0,1)));
+    }
+    else if (p0 == 11) {
+        bishop_moves.insert(move(p0, pos(2,0)));
+        bishop_moves.insert(move(p0, pos(1,1)));
+        bishop_moves.insert(move(p0, pos(0,2)));
+    }
+    else if (p0 == 12) {
+        bishop_moves.insert(move(p0, pos(3,0)));
+        bishop_moves.insert(move(p0, pos(2,1)));
+        bishop_moves.insert(move(p0, pos(1,2)));
+        bishop_moves.insert(move(p0, pos(0,3)));
+    }
+    else if (p0 == 13) {
+        bishop_moves.insert(move(p0, pos(4,0)));
+        bishop_moves.insert(move(p0, pos(3,1)));
+    }
 
     return bishop_moves;
 }

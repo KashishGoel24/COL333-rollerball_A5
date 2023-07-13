@@ -3,7 +3,10 @@ import ChessBoard from 'chessboardjs-vue3';
 import {onMounted} from 'vue';
 
 onMounted(() => {
-    var board = ChessBoard('myBoard', '8/2rbp3/2rkp3/8/8/8/2PKR3/2PBR3')
+    var board = ChessBoard('myBoard', {
+        'position': '8/2rbp3/2rkp3/8/8/8/2PKR3/2PBR3',
+        'draggable': true,
+    })
 });
 </script>
 
