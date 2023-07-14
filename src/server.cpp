@@ -1,87 +1,113 @@
-#include <csignal>
+#include "server.hpp"
+
+#include <algorithm>
+#include <functional>
 #include <iostream>
-#include <websocketpp/config/asio_no_tls.hpp>
-#include <websocketpp/server.hpp>
 
-using Server = websocketpp::server<websocketpp::config::asio>;
-using ConnectionHdl = websocketpp::connection_hdl;
-using websocketpp::lib::placeholders::_1;
-using websocketpp::lib::placeholders::_2;
+//The name of the special JSON field that holds the message type for messages
+#define MESSAGE_FIELD "__MESSAGE__"
 
-bool equal_connection_hdl(ConnectionHdl& a, ConnectionHdl& b) {
-  return a.lock() == b.lock();
+WebsocketServer::WebsocketServer()
+{
+    //Wire up our event handlers
+    this->endpoint.set_open_handler(std::bind(&WebsocketServer::onOpen, this, std::placeholders::_1));
+    this->endpoint.set_close_handler(std::bind(&WebsocketServer::onClose, this, std::placeholders::_1));
+    this->endpoint.set_message_handler(std::bind(&WebsocketServer::onMessage, this, std::placeholders::_1, std::placeholders::_2));
+    
+    //Initialise the Asio library, using our own event loop object
+    this->endpoint.init_asio(&(this->eventLoop));
 }
 
-void remove_connection(std::vector<ConnectionHdl>* connections,
-                       ConnectionHdl& hdl) {
-  auto equal_connection_hdl_predicate =
-      std::bind(&equal_connection_hdl, hdl, ::_1);
-  connections->erase(
-      std::remove_if(std::begin(*connections), std::end(*connections),
-                     equal_connection_hdl_predicate),
-      std::end(*connections));
+void WebsocketServer::run(int port)
+{
+    //Listen on the specified port number and start accepting connections
+    this->endpoint.listen(port);
+    this->endpoint.start_accept();
+    
+    //Start the Asio event loop
+    this->endpoint.run();
 }
 
-void on_message(Server* server, std::vector<ConnectionHdl>* connections,
-                ConnectionHdl hdl,
-                websocketpp::config::asio::message_type::ptr msg) {
-  std::cout << "on_message: " << msg->get_payload() << std::endl;
-  for (auto& connection : *connections) {
-    if (connection.lock() != hdl.lock()) {
-      server->send(connection, msg->get_payload(),
-                   websocketpp::frame::opcode::text);
+size_t WebsocketServer::numConnections()
+{
+    //Prevent concurrent access to the list of open connections from multiple threads
+    std::lock_guard<std::mutex> lock(this->connectionListMutex);
+    
+    return this->openConnections.size();
+}
+
+void WebsocketServer::sendMessage(ClientConnection conn, const string& message)
+{
+    //Send the JSON data to the client (will happen on the networking thread's event loop)
+    this->endpoint.send(conn, message, websocketpp::frame::opcode::text);
+}
+
+void WebsocketServer::broadcastMessage(const string& message)
+{
+    //Prevent concurrent access to the list of open connections from multiple threads
+    std::lock_guard<std::mutex> lock(this->connectionListMutex);
+    
+    for (auto conn : this->openConnections) {
+        this->sendMessage(conn, message);
     }
-  }
 }
 
-void on_open(std::vector<ConnectionHdl>* connections, ConnectionHdl hdl) {
-  std::cout << "on_open" << std::endl;
-  connections->push_back(hdl);
-  std::cout << "connections: " << connections->size() << std::endl;
+void WebsocketServer::onOpen(ClientConnection conn)
+{
+    {
+        //Prevent concurrent access to the list of open connections from multiple threads
+        std::lock_guard<std::mutex> lock(this->connectionListMutex);
+        
+        //Add the connection handle to our list of open connections
+        this->openConnections.push_back(conn);
+    }
+    
+    //Invoke any registered handlers
+    for (auto handler : this->connectHandlers) {
+        handler(conn);
+    }
 }
 
-void on_close(Server* server, std::vector<ConnectionHdl>* connections,
-              ConnectionHdl hdl) {
-  std::cout << "on_close" << std::endl;
-  remove_connection(connections, hdl);
-  std::cout << "connections: " << connections->size() << std::endl;
+void WebsocketServer::onClose(ClientConnection conn)
+{
+    {
+        //Prevent concurrent access to the list of open connections from multiple threads
+        std::lock_guard<std::mutex> lock(this->connectionListMutex);
+        
+        //Remove the connection handle from our list of open connections
+        auto connVal = conn.lock();
+        auto newEnd = std::remove_if(this->openConnections.begin(), this->openConnections.end(), [&connVal](ClientConnection elem)
+        {
+            //If the pointer has expired, remove it from the vector
+            if (elem.expired() == true) {
+                return true;
+            }
+            
+            //If the pointer is still valid, compare it to the handle for the closed connection
+            auto elemVal = elem.lock();
+            if (elemVal.get() == connVal.get()) {
+                return true;
+            }
+            
+            return false;
+        });
+        
+        //Truncate the connections vector to erase the removed elements
+        this->openConnections.resize(std::distance(openConnections.begin(), newEnd));
+    }
+
+    //Invoke any registered handlers
+    for (auto handler : this->disconnectHandlers) {
+        handler(conn);
+    }
 }
 
-void turn_off_logging(Server& server) {
-  server.clear_access_channels(websocketpp::log::alevel::all);
-  server.clear_error_channels(websocketpp::log::elevel::all);
+void WebsocketServer::onMessage(ClientConnection conn, WebsocketEndpoint::message_ptr msg)
+{
+    //Validate that the incoming message contains valid JSON
+    string message = msg->get_payload();
+
+    for (auto handler : this->messageHandlers) {
+        handler(conn, message);
+    }
 }
-
-void set_message_handler(Server& server,
-                         std::vector<ConnectionHdl>& connections) {
-  server.set_message_handler(
-      websocketpp::lib::bind(&on_message, &server, &connections, ::_1, ::_2));
-}
-
-void set_open_handler(Server& server, std::vector<ConnectionHdl>& connections) {
-  server.set_open_handler(websocketpp::lib::bind(&on_open, &connections, ::_1));
-}
-
-void set_close_handler(Server& server,
-                       std::vector<ConnectionHdl>& connections) {
-  server.set_close_handler(
-      websocketpp::lib::bind(&on_close, &server, &connections, ::_1));
-}
-
-int main() {
-  Server server;
-  std::vector<ConnectionHdl> connections;
-
-  turn_off_logging(server);
-
-  server.init_asio();
-
-  set_message_handler(server, connections);
-  set_open_handler(server, connections);
-  set_close_handler(server, connections);
-
-  server.listen(30001);
-  server.start_accept();
-  server.run();
-}
-

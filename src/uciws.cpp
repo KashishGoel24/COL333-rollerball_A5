@@ -1,69 +1,125 @@
 #include <iostream>
 #include "uciws.hpp"
 
+#include <string>
+#include <sstream>
+#include <thread>
+#include <vector>
+#include <iterator>
+
+template <typename Out>
+void split(const std::string &s, char delim, Out result) {
+    std::istringstream iss(s);
+    std::string item;
+    while (std::getline(iss, item, delim)) {
+        *result++ = item;
+    }
+}
+
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    split(s, delim, std::back_inserter(elems));
+    return elems;
+}
+
 UCIWSServer::UCIWSServer(std::string name, std::string ip, uint32_t port) {
     this->ip = ip;
     this->port = port;
 }
 
+void UCIWSServer::handle_message(ClientConnection conn, const std::string& message) {
+
+    auto toks = split(message, ' ');
+
+    if (toks[0] == "uci") {
+        on_uci();
+    }
+    else if (toks[0] == "isready") {
+        on_isready();
+    }
+    else if (toks[0] == "ucinewgame") {
+        on_ucinewgame();
+    }
+    else if (toks[0] == "position") {
+        on_position(toks);
+    }
+    else if (toks[0] == "go") {
+        on_go(toks);
+    }
+    else if (toks[0] == "stop") {
+        on_stop();
+    }
+    else if (toks[0] == "quit") {
+        on_quit();
+    }
+    else {
+        std::cout << "Unsupported message\n";
+    }
+}
+
 void UCIWSServer::start() {
 
-    // enter into polling loop
-    if (!server.init(ip.c_str(), port)) {
-        std::cout << "wsserver init failed: " << server.getLastError() << std::endl;
-        return;
-    }
-
-    running = true;
-    ws_thr = std::thread([this]() {
-        while (running.load(std::memory_order_relaxed)) {
-            server.poll(this);
-            std::this_thread::yield();
-        }
+    //Register our network callbacks, ensuring the logic is run on the main thread's event loop
+    server.connect([this](ClientConnection conn)
+    {
+        this->main_evt_loop.post([conn, this]()
+        {
+            std::clog << "Connection opened." << std::endl;
+            std::clog << "There are now " << server.numConnections() << " open connections." << std::endl;
+            
+            //Send a hello message to the client
+            server.sendMessage(conn, "hello");
+        });
     });
 
-    std::cout << "Server running..." << std::endl;
-    ws_thr.join();
-    std::cout << "Server stopped..." << std::endl;
+    server.disconnect([this](ClientConnection conn)
+    {
+        main_evt_loop.post([conn, this]()
+        {
+            std::clog << "Connection closed." << std::endl;
+            std::clog << "There are now " << server.numConnections() << " open connections." << std::endl;
+        });
+    });
+
+    server.message([this](ClientConnection conn, const string& message) {
+        this->handle_message(conn, message);
+    });
+    
+    //Start the networking thread
+    this->server_thread = std::thread([this]() {
+        server.run(port);
+    });
+    
+    //Start the event loop for the main thread
+    asio::io_service::work work(main_evt_loop);
+    main_evt_loop.run();
 }
 
-void UCIWSServer::end() {
-    running = false;
+void UCIWSServer::on_uci() {
+    std::cout << "In method on_uci\n";
 }
 
-bool UCIWSServer::onWSConnect(WSConn& conn, const char* request_uri, const char* host, const char* origin, const char* protocol,
-               const char* extensions, char* resp_protocol, uint32_t resp_protocol_size, char* resp_extensions,
-               uint32_t resp_extensions_size) {
-
-    this->connection = conn;
-
-    struct sockaddr_in addr;
-    conn.getPeername(addr);
-    std::cout << "ws connection from: " << inet_ntoa(addr.sin_addr) << ":" << ntohs(addr.sin_port) << std::endl;
-    std::cout << "request_uri: " << request_uri << std::endl;
-    std::cout << "host: " << host << std::endl;
-    if (origin) {
-      std::cout << "origin: " << origin << std::endl;
-    }
-    if (protocol) {
-      std::cout << "protocol: " << protocol << std::endl;
-    }
-    if (extensions) {
-      std::cout << "extensions: " << extensions << std::endl;
-    }
-
-    return true;
+void UCIWSServer::on_isready() {
+    std::cout << "In method on_isready\n";
 }
 
-void UCIWSServer::onWSClose(WSConn& conn, uint16_t status_code, const char* reason) {
-    std::cout << "WS closed, error code " << status_code << std::endl;
+void UCIWSServer::on_ucinewgame() {
+    std::cout << "In method on_ucinewgame\n";
 }
 
-void UCIWSServer::onWSMsg(WSConn& conn, uint8_t opcode, const uint8_t* payload, uint32_t pl_len) {
-
-    std::string message((char*)payload);
-
-    // TODO process message and call methods specified
-
-    std::cout << "Received message " << message << std::endl;
+void UCIWSServer::on_position(std::vector<std::string>& toks) {
+    std::cout << "In method on_position\n";
 }
+
+void UCIWSServer::on_go(std::vector<std::string>& toks) {
+    std::cout << "In method on_go\n";
+}
+
+void UCIWSServer::on_stop() {
+    std::cout << "In method on_stop\n";
+}
+
+void UCIWSServer::on_quit() {
+    std::cout << "In method on_quit\n";
+}
+
