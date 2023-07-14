@@ -5,6 +5,9 @@ INCLUDES=-Iinclude #-I/opt/homebrew/opt/openssl@1.1/include/
 #LIBPATH=-L/opt/homebrew/opt/openssl@1.1/lib/
 #LIBS=-lcrypto -lssl
 
+dbg_uciws: src/debug_uciws.cpp 
+	$(CC) $(CFLAGS) $(INCLUDES) src/uciws.cpp src/debug_uciws.cpp -o bin/debug_uciws
+
 dbg_board: src/debug_board.cpp 
 	$(CC) $(CFLAGS) $(INCLUDES) src/game.cpp src/debug_board.cpp -o bin/debug_board
 

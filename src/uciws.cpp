@@ -1,13 +1,12 @@
 #include <iostream>
 #include "uciws.hpp"
 
-UCIWSServer::UCIWSServer(std::string name, std::string ip, uint32_t port, Game& game) {
-    game = game;
+UCIWSServer::UCIWSServer(std::string name, std::string ip, uint32_t port) {
     this->ip = ip;
     this->port = port;
 }
 
-void UCIWSServer::run() {
+void UCIWSServer::start() {
 
     // enter into polling loop
     if (!server.init(ip.c_str(), port)) {
@@ -26,6 +25,10 @@ void UCIWSServer::run() {
     std::cout << "Server running..." << std::endl;
     ws_thr.join();
     std::cout << "Server stopped..." << std::endl;
+}
+
+void UCIWSServer::end() {
+    running = false;
 }
 
 bool UCIWSServer::onWSConnect(WSConn& conn, const char* request_uri, const char* host, const char* origin, const char* protocol,

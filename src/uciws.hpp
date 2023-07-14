@@ -12,12 +12,13 @@ struct UCIConnData {
 
 class UCIWSServer {
 
+    public:
     using WSServer = websocket::WSServer<UCIWSServer, UCIConnData>;
     using WSConn = WSServer::Connection;
 
     WSServer server;
     WSConn connection;
-    Game game;
+    // Game game; - TODO
 
     std::thread ws_thr;
     std::atomic<bool> running;
@@ -25,9 +26,10 @@ class UCIWSServer {
     std::string ip;
     uint32_t port;
 
-    UCIWSServer(std::string name, Game& game);
+    UCIWSServer(std::string name, std::string ip, uint32_t port);
 
-    void run();
+    void start();
+    void end();
     void on_uci();
     void on_isready();
     void on_ucinewgame();
