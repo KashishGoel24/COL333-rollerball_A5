@@ -22,8 +22,8 @@ std::vector<std::string> split(const std::string &s, char delim) {
     return elems;
 }
 
-UCIWSServer::UCIWSServer(std::string name, std::string ip, uint32_t port) {
-    this->ip = ip;
+UCIWSServer::UCIWSServer(std::string name, uint32_t port) {
+    this->name = name;
     this->port = port;
 }
 

@@ -4,9 +4,6 @@
 #include <functional>
 #include <iostream>
 
-//The name of the special JSON field that holds the message type for messages
-#define MESSAGE_FIELD "__MESSAGE__"
-
 WebsocketServer::WebsocketServer()
 {
     //Wire up our event handlers

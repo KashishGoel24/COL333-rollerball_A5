@@ -6,9 +6,8 @@
 #include <asio/io_service.hpp>
 
 #include "server.hpp"
-
-struct UCIConnData {
-};
+#include "board.hpp"
+#include "engine.hpp"
 
 class UCIWSServer {
 
@@ -18,12 +17,17 @@ class UCIWSServer {
     WebsocketServer server;
     
     std::thread server_thread;
+    std::thread game_thread;
     std::atomic<bool> running;
 
-    std::string ip;
     uint32_t port;
+    std::string name;
 
-    UCIWSServer(std::string name, std::string ip, uint32_t port);
+    Board b;
+    MoveDB db;
+    Engine e;
+
+    UCIWSServer(std::string name, uint32_t port);
 
     void start();
     void stop();

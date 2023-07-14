@@ -45,7 +45,6 @@ enum PieceType {
 
 };
 
-// bitboard-based representation
 struct Board {
 
     // DO NOT add any fields above this
@@ -69,25 +68,9 @@ struct Board {
 
     MoveDB *moves = nullptr;
 
-    Board(MoveDB *moves);
+    Board(MoveDB *moves, std::string position_cmd);
 
-    std::unordered_set<U16> get_valid_moves();
-    std::unordered_set<U16> get_moves_for_piece(U8 piece_pos);
+    std::unordered_set<U16> get_valid_moves() const;
+    std::unordered_set<U16> get_moves_for_piece(U8 piece_pos) const;
     void do_move(U16 move, PieceType promotion = BISHOP);
-};
-
-class Game {
-
-    private:
-
-
-    public:
-    Move best_move;
-
-    Game(PlayerColor c);
-
-    std::vector<Move> get_valid_moves();
-
-    void search_best_move();
-
 };

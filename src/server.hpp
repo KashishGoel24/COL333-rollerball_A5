@@ -1,7 +1,5 @@
-#ifndef _WEBSOCKET_SERVER
-#define _WEBSOCKET_SERVER
+#pragma once
 
-//We need to define this when using the Asio library without Boost
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 
@@ -78,5 +76,3 @@ class WebsocketServer
         vector<std::function<void(ClientConnection)>> disconnectHandlers;
         vector<std::function<void(ClientConnection, const string&)>> messageHandlers;
 };
-
-#endif

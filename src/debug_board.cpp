@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 
-#include "game.hpp"
+#include "board.hpp"
 
 std::string board_to_str(uint64_t board) {
 
