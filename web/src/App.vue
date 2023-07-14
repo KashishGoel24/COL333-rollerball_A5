@@ -8,9 +8,19 @@ onMounted(() => {
         'draggable': true,
     })
 });
+
+const state = reactive({
+    white_port: 8181,
+    black_port: 8182
+})
+
 </script>
 
 <template>
+<form>
+<input type="number" v-model.number="state.white_port" placeholder="white port">
+<input type="number" v-model.number="state.black_port" placeholder="black port">
+</form>
 <div id="myBoard" style="width: 400px"></div>
 </template>
 
