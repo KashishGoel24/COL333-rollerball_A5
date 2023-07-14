@@ -58,14 +58,16 @@ class Game {
 
     do_move() {
         var player = this.curr_player;
-        dispatch_uci_command(player, 'position startpos moves ' + move_list.join(' ')); 
-        dispatch_uci_command(player, 'go'); 
+        this.dispatch_uci_command(player, 'position startpos moves ' + this.move_list.join(' ')); 
+        this.dispatch_uci_command(player, 'go'); 
         this.player_state[player] = 'thinking';
-        setTimeout(() => {dispatch_uci_command(player, 'stop')}, state.thinking_time*1000);
+        setTimeout(() => {this.dispatch_uci_command(player, 'stop')}, state.thinking_time*1000);
     }
 
     process_uci_command(player, command) {
-        var tokens = commmand.split(" ");
+        
+        console.log(player + " : " + command);
+        var tokens = command.split(" ");
         if (tokens[0] === 'uciok') {
             this.player_state[player] = 'uci_initialized';
         }
@@ -76,7 +78,7 @@ class Game {
                 // lesgoooo
                 state.game_btn_state = 'started';
                 state.game_btn_text = 'Game in progress';
-                do_move();
+                this.do_move();
             }
         }
         else if (tokens[0] === 'info') {
@@ -87,11 +89,11 @@ class Game {
                 // do move
                 this.player_state[this.curr_player] = 'ready';
                 var move = tokens[1];
-                move_list.append(move)
+                this.move_list.push(move);
                 this.board.move(move.slice(0,2)+"-"+move.slice(2));
                 this.curr_player = this.next_player[player];
                 if (this.player_state[this.curr_player] === 'ready') {
-                    do_move();
+                    this.do_move();
                 }
             }
             else {
@@ -154,7 +156,7 @@ function connect_black() {
     state.ws_black = new WebSocket(`ws://localhost:${state.black_port}`);
 
     state.ws_black.onopen = (event) => {
-        state.ws_white.send("uci");
+        state.ws_black.send("uci");
         state.b_conn_btn_state = 'button-connected';
         state.b_conn_btn_text = 'Connected to Black Bot';
         console.log("Connected\n");
