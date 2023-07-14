@@ -2,13 +2,6 @@
 import ChessBoard from 'chessboardjs-vue3';
 import {onMounted, reactive} from 'vue';
 
-onMounted(() => {
-    var board = ChessBoard('myBoard', {
-        'position': '8/2rbp3/2rkp3/8/8/8/2PKR3/2PBR3',
-        'draggable': true,
-    })
-});
-
 const state = reactive({
     white_port: 8181,
     black_port: 8182,
@@ -25,8 +18,107 @@ const state = reactive({
     right_info: 'Copyright COL333 TAs',
 
     ws_white: null,
-    ws_black: null
+    ws_black: null,
+
+    game: null
 })
+
+class Game {
+
+    constructor() {
+        this.curr_player = 'white';
+        this.board = new ChessBoard('myBoard', {
+            'position': '8/2rbp3/2rkp3/8/8/8/2PKR3/2PBR3'
+        })
+
+        this.player_state = {
+            'white': 'uninitialized',
+            'black': 'uninitialized'
+        }
+
+        this.next_player = {
+            'white': 'black',
+            'black': 'white'
+        }
+
+        this.move_list = []
+    }
+
+    start() {
+        
+        if (this.player_state['white'] === 'uci_initialized' && this.player_state['black'] === 'uci_initialized') {
+            this.dispatch_uci_command('white', 'isready');
+            this.dispatch_uci_command('black', 'isready');
+        }
+        else {
+            state.left_info = 'Could not start game: one or more UCI engines not initialized';
+        }
+
+    }
+
+    do_move() {
+        var player = this.curr_player;
+        dispatch_uci_command(player, 'position startpos moves ' + move_list.join(' ')); 
+        dispatch_uci_command(player, 'go'); 
+        this.player_state[player] = 'thinking';
+        setTimeout(() => {dispatch_uci_command(player, 'stop')}, state.thinking_time*1000);
+    }
+
+    process_uci_command(player, command) {
+        var tokens = commmand.split(" ");
+        if (tokens[0] === 'uciok') {
+            this.player_state[player] = 'uci_initialized';
+        }
+        else if (tokens[0] === 'readyok') {
+            this.player_state[player] = 'ready';
+
+            if (this.player_state['white'] === 'ready' && this.player_state['black'] === 'ready') {
+                // lesgoooo
+                state.game_btn_state = 'started';
+                state.game_btn_text = 'Game in progress';
+                do_move();
+            }
+        }
+        else if (tokens[0] === 'info') {
+            state.left_info = player + ":" + tokens.slice(1).join(' ');
+        }
+        else if (tokens[0] === 'bestmove') {
+            if (this.curr_player === player) {
+                // do move
+                this.player_state[this.curr_player] = 'ready';
+                var move = tokens[1];
+                move_list.append(move)
+                this.board.move(move.slice(0,2)+"-"+move.slice(2));
+                this.curr_player = this.next_player[player];
+                if (this.player_state[this.curr_player] === 'ready') {
+                    do_move();
+                }
+            }
+            else {
+                state.left_info = 'ERROR: received an out-of-place move from ' + player;
+            }
+        }
+    }
+
+    dispatch_uci_command(player, command) {
+        
+        if (player === 'white') {
+            state.ws_white.send(command);
+        }
+        else if (player === 'black') {
+            state.ws_black.send(command);
+        }
+
+    }
+
+    stop() {
+
+    }
+}
+
+onMounted(() => {
+    state.game = new Game();
+});
 
 function connect_white() {
     console.log("Connecting to white\n");
@@ -46,6 +138,10 @@ function connect_white() {
         state.left_info = 'Could not connect to white bot';
         state.w_conn_btn_state = 'button-to-connect';
         state.w_conn_btn_text = 'Connect White Bot';
+    }
+    
+    state.ws_white.onmessage = (msg) => {
+        state.game.process_uci_command('white', msg.data);
     }
 
 }
@@ -69,10 +165,10 @@ function connect_black() {
         state.b_conn_btn_state = 'button-to-connect';
         state.b_conn_btn_text = 'Connect Black Bot';
     }
-}
 
-function start() {
-
+    state.ws_black.onmessage = (msg) => {
+        state.game.process_uci_command('black', msg.data);
+    }
 }
 
 </script>
@@ -96,7 +192,7 @@ function start() {
 <div class='button-bar'>
     <div class='button-enclose'><button :class='state.w_conn_btn_state' @click="connect_white" v-html="state.w_conn_btn_text"></button></div>
     <div class='button-enclose'><button :class='state.b_conn_btn_state' @click="connect_black" v-html="state.b_conn_btn_text"></button></div>
-    <div class='button-enclose'><button :class='state.game_btn_state' @click="start" v-html="state.game_btn_text"></button></div>
+    <div class='button-enclose'><button :class='state.game_btn_state' @click="state.game.start" v-html="state.game_btn_text"></button></div>
 </div>
 
 <div class='board-enclose'>
