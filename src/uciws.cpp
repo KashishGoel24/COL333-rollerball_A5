@@ -66,9 +66,6 @@ void UCIWSServer::start() {
         {
             std::clog << "Connection opened." << std::endl;
             std::clog << "There are now " << server.numConnections() << " open connections." << std::endl;
-            
-            //Send a hello message to the client
-            server.sendMessage(conn, "hello");
         });
     });
 
@@ -97,29 +94,47 @@ void UCIWSServer::start() {
 
 void UCIWSServer::on_uci() {
     std::cout << "In method on_uci\n";
+    server.broadcastMessage("uciok");
 }
 
 void UCIWSServer::on_isready() {
     std::cout << "In method on_isready\n";
+    server.broadcastMessage("readyok");
 }
 
 void UCIWSServer::on_ucinewgame() {
     std::cout << "In method on_ucinewgame\n";
+    b = Board();
 }
 
 void UCIWSServer::on_position(std::vector<std::string>& toks) {
     std::cout << "In method on_position\n";
+    if (toks.size() > 3) {
+        b.do_move(str_to_move(toks[toks.size()-1]));
+    }
 }
 
 void UCIWSServer::on_go(std::vector<std::string>& toks) {
     std::cout << "In method on_go\n";
+    // launch a thread to find the best move
+    e.search = true;
+    this->game_thread = std::thread([this]() {
+        e.find_best_move(b);
+    });
 }
 
 void UCIWSServer::on_stop() {
     std::cout << "In method on_stop\n";
+    e.search = false;
+    U16 move = e.best_move;
+    this->game_thread.join();
+    assert(b.get_valid_moves().count(move) > 0);
+    b.do_move(move);
+    server.broadcastMessage("bestmove " + move_to_str(move));
 }
 
 void UCIWSServer::on_quit() {
     std::cout << "In method on_quit\n";
+    std::exit(0);
 }
 

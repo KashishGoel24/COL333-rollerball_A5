@@ -24,7 +24,6 @@ class UCIWSServer {
     std::string name;
 
     Board b;
-    MoveDB db;
     Engine e;
 
     UCIWSServer(std::string name, uint32_t port);

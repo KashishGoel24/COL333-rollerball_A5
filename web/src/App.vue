@@ -90,7 +90,9 @@ class Game {
                 this.player_state[this.curr_player] = 'ready';
                 var move = tokens[1];
                 this.move_list.push(move);
-                this.board.move(move.slice(0,2)+"-"+move.slice(2));
+                var textmove = move.slice(0,2)+"-"+move.slice(2);
+                this.board.move(textmove);
+                console.log('Moved ' + textmove);
                 this.curr_player = this.next_player[player];
                 if (this.player_state[this.curr_player] === 'ready') {
                     this.do_move();
