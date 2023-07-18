@@ -6,8 +6,7 @@
 
 int main(int argc, char** argv) {
 
-    Board *b = new Board("");
-
+    Board *b = new Board();
 
     while (true) {
         std::cout << board_to_str(b->board_0) << std::endl;

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <random>
+#include <iostream>
 
 #include "board.hpp"
 #include "engine.hpp"
@@ -13,6 +14,11 @@ void Engine::find_best_move(const Board& b) {
     }
     else {
         std::vector<U16> moves;
+        std::cout << all_boards_to_str(b) << std::endl;
+        for (auto m : moveset) {
+            std::cout << move_to_str(m) << " ";
+        }
+        std::cout << std::endl;
         std::sample(
             moveset.begin(),
             moveset.end(),

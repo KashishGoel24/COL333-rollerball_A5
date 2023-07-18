@@ -28,7 +28,21 @@ class Game {
     constructor() {
         this.curr_player = 'white';
         this.board = new ChessBoard('myBoard', {
-            'position': '8/2rbp3/2rkp3/8/8/8/2PKR3/2PBR3'
+            'position': {
+                c1: 'wP',
+                c2: 'wP',
+                d1: 'wB',
+                d2: 'wK',
+                e1: 'wR',
+                e2: 'wR',
+
+                c6: 'bR',
+                c7: 'bR',
+                d6: 'bK',
+                d7: 'bB',
+                e6: 'bP',
+                e7: 'bP'
+            }
         })
 
         this.player_state = {
@@ -90,9 +104,19 @@ class Game {
                 this.player_state[this.curr_player] = 'ready';
                 var move = tokens[1];
                 this.move_list.push(move);
-                var textmove = move.slice(0,2)+"-"+move.slice(2);
-                this.board.move(textmove);
-                console.log('Moved ' + textmove);
+                if (move.length > 4) {
+                    // promote - this is harder than it needs to be 
+                    var curr_pos = this.board.position();
+                    delete curr_pos[move.slice(0,2)];
+                    curr_pos[move.slice(2,4)] = this.curr_player[0] + move[4].toUpperCase();
+                    this.board.position(curr_pos, true);
+                    console.log(curr_pos);
+                }
+                else {
+                    var textmove = move.slice(0,2)+"-"+move.slice(2,4);
+                    this.board.move(textmove);
+                    console.log('Moved ' + textmove);
+                }
                 this.curr_player = this.next_player[player];
                 if (this.player_state[this.curr_player] === 'ready') {
                     this.do_move();

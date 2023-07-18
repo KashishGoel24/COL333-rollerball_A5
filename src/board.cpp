@@ -49,9 +49,9 @@ constexpr U8 id[64] = {
 #define cw_90_pos(p) cw_90[p]
 #define cw_180_pos(p) cw_180[p]
 #define acw_90_pos(p) acw_90[p]
-#define cw_90_move(m) move(cw_90[getp0(m)], cw_90[getp1(m)])
-#define acw_90_move(m) move(acw_90[getp0(m)], acw_90[getp1(m)])
-#define cw_180_move(p) move(cw_180[getp0(m)], cw_180[getp1(m)])
+#define cw_90_move(m) move_promo(cw_90[getp0(m)], cw_90[getp1(m)], getpromo(m))
+#define acw_90_move(m) move_promo(acw_90[getp0(m)], acw_90[getp1(m)], getpromo(m))
+#define cw_180_move(p) move_promo(cw_180[getp0(m)], cw_180[getp1(m)], getpromo(m))
 #define color(p) ((PlayerColor)(p & (WHITE | BLACK)))
 
 std::unordered_set<U16> transform_moves(const std::unordered_set<U16>& moves, const U8 *transform) {
@@ -59,7 +59,7 @@ std::unordered_set<U16> transform_moves(const std::unordered_set<U16>& moves, co
     std::unordered_set<U16> rot_moves;
 
     for (U16 move : moves) {
-        rot_moves.insert(move(transform[getp0(move)], transform[getp1(move)]));
+        rot_moves.insert(move_promo(transform[getp0(move)], transform[getp1(move)], getpromo(move)));
     }
 
     return rot_moves;
@@ -67,7 +67,7 @@ std::unordered_set<U16> transform_moves(const std::unordered_set<U16>& moves, co
 
 std::unordered_set<U16> construct_bottom_rook_moves_with_board(const U8 p0, const U8* board) {
 
-    U8 left_rook_reflect[7] = {0, 8, 16, 24, 32, 40, 48};
+    int left_rook_reflect[7] = {0, 8, 16, 24, 32, 40, 48};
     PlayerColor color = color(board[p0]);
     std::unordered_set<U16> rook_moves;
     bool refl_blocked = false;
@@ -98,14 +98,16 @@ std::unordered_set<U16> construct_bottom_rook_moves_with_board(const U8 p0, cons
 
     if (refl_blocked) return rook_moves;
     
-    for (int p1 : left_rook_reflect) {
-        if (board[p1]) {
-            if (board[p1] & color) break;         // our piece
-            else rook_moves.insert(move(p0, p1)); // their piece - capture
-            break;
-        }
-        else {
-            rook_moves.insert(move(p0, p1));
+    if (p0 < 8) {
+        for (int p1 : left_rook_reflect) {
+            if (board[p1]) {
+                if (board[p1] & color) break;         // our piece
+                else rook_moves.insert(move(p0, p1)); // their piece - capture
+                break;
+            }
+            else {
+                rook_moves.insert(move(p0, p1));
+            }
         }
     }
 
@@ -191,19 +193,26 @@ std::unordered_set<U16> construct_bottom_pawn_moves_with_board(const U8 p0, cons
     
     PlayerColor color = color(board[p0]);
     std::unordered_set<U16> pawn_moves;
-    if (promote) {
-        if (!(board[pos(getx(p0)-1,0)] & color)) {
+
+    if (!(board[pos(getx(p0)-1,0)] & color)) {
+        if (promote) {
             pawn_moves.insert(move_promo(p0, pos(getx(p0)-1,0), PAWN_ROOK));
             pawn_moves.insert(move_promo(p0, pos(getx(p0)-1,0), PAWN_BISHOP));
         }
-        if (!(board[pos(getx(p0)-1,1)] & color)) pawn_moves.insert(move(p0, pos(getx(p0)-1,1)));
-        if (p0 == 10 && !(board[17] & color)) pawn_moves.insert(move(p0, 17));
+        else {
+            pawn_moves.insert(move(p0, pos(getx(p0)-1,0)));
+        }
     }
-    else {
-        if (!(board[pos(getx(p0)-1,0)] & color)) pawn_moves.insert(move(p0, pos(getx(p0)-1,0)));
-        if (!(board[pos(getx(p0)-1,1)] & color)) pawn_moves.insert(move(p0, pos(getx(p0)-1,1)));
-        if (p0 == 10 && !(board[17] & color)) pawn_moves.insert(move(p0, 17));
+    if (!(board[pos(getx(p0)-1,1)] & color)) {
+        if (promote) {
+            pawn_moves.insert(move_promo(p0, pos(getx(p0)-1,1), PAWN_ROOK));
+            pawn_moves.insert(move_promo(p0, pos(getx(p0)-1,1), PAWN_BISHOP));
+        }
+        else {
+            pawn_moves.insert(move(p0, pos(getx(p0)-1,1)));
+        }
     }
+    if (p0 == 10 && !(board[17] & color)) pawn_moves.insert(move(p0, 17));
 
     return pawn_moves;
 }
@@ -217,8 +226,8 @@ std::unordered_set<U16> construct_bottom_king_moves_with_board(const U8 p0, cons
     std::unordered_set<U16> king_moves;
     if (!(board[pos(getx(p0)-1,0)] & color)) king_moves.insert(move(p0, pos(getx(p0)-1,0)));
     if (!(board[pos(getx(p0)-1,1)] & color)) king_moves.insert(move(p0, pos(getx(p0)-1,1)));
-    if (!(board[pos(getx(p0)+1,0)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,0)));
-    if (!(board[pos(getx(p0)+1,1)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,1)));
+    if (p0 != 6 && !(board[pos(getx(p0)+1,0)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,0)));
+    if (p0 != 6 && !(board[pos(getx(p0)+1,1)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,1)));
     if (!(board[pos(getx(p0),gety(p0)^1)] & color)) king_moves.insert(move(p0, pos(getx(p0),gety(p0)^1)));
 
     return king_moves;
@@ -236,7 +245,7 @@ char piece_to_char(U8 piece) {
     return ch;
 }
 
-std::string board_to_str(U8 *board) {
+std::string board_to_str(const U8 *board) {
 
     std::string board_str = ".......\n.......\n..   ..\n..   ..\n..   ..\n.......\n.......\n";
 
@@ -249,6 +258,27 @@ std::string board_to_str(U8 *board) {
     return board_str;
 }
 
+std::string all_boards_to_str(const Board& b) {
+
+    std::string board_str(256, ' ');
+    std::string board_mask = ".......\n.......\n..   ..\n..   ..\n..   ..\n.......\n.......\n";
+
+    const U8 (*boards)[64] = &(b.board_0);
+
+    for (int b=0; b<4; b++) {
+        for (int i=0; i<56; i++) {
+            if (board_mask[i] == '\n' || board_mask[i] == ' ') continue;
+            board_str[(224-(i/8)*32) + b*8 + i%8] = piece_to_char(boards[b][i]);
+        }
+    }
+
+    for (int i=31; i<256; i+=32) {
+        board_str[i] = '\n';
+    }
+
+    return board_str;
+}
+
 std::string move_to_str(U16 move) {
 
     std::string s = "a1a1";
@@ -256,10 +286,10 @@ std::string move_to_str(U16 move) {
     s[1] += gety(getp0(move));
     s[2] += getx(getp1(move));
     s[3] += gety(getp1(move));
-    if (getpromo(move) == PAWN_BISHOP) {
+    if (getpromo(move) & PAWN_BISHOP) {
         s += "b";
     }
-    else if (getpromo(move) == PAWN_ROOK) {
+    else if (getpromo(move) & PAWN_ROOK) {
         s += "r";
     }
 
@@ -294,12 +324,13 @@ std::unordered_set<U16> Board::get_moves_for_piece(U8 piece_pos) const {
     const U8 *board = this->board_0;
     const U8 *coord_map = id;
     const U8 *inv_coord_map = id;
-    if      (left.count(piece_pos))  { board = this->board_90;  coord_map = acw_90; inv_coord_map = cw_90;  }
+    if      (left.count(piece_pos))  { board = this->board_270;  coord_map = acw_90; inv_coord_map = cw_90;  }
     else if (top.count(piece_pos))   { board = this->board_180; coord_map = cw_180; inv_coord_map = cw_180; }
-    else if (right.count(piece_pos)) { board = this->board_270; coord_map = cw_90;  inv_coord_map = acw_90; }
+    else if (right.count(piece_pos)) { board = this->board_90; coord_map = cw_90;  inv_coord_map = acw_90; }
 
     if (piece_id & PAWN) {
-        if (gety(coord_map[piece_pos]) == 5) {
+        if (((piece_pos == 51 || piece_pos == 43) && (piece_id & WHITE)) || 
+            ((piece_pos == 11 || piece_pos == 3)  && (piece_id & BLACK)) ) {
             moves = construct_bottom_pawn_moves_with_board(coord_map[piece_pos], board, true);
         }
         else {
@@ -328,7 +359,7 @@ void rotate_board(U8 *src, U8 *tgt, const U8 *transform) {
     }
 }
 
-Board::Board() {
+Board::Board(): board_0{} {
 
     this->board_0[this->b_rook_ws]  = BLACK | ROOK;
     this->board_0[this->b_rook_bs]  = BLACK | ROOK;
@@ -347,6 +378,8 @@ Board::Board() {
     rotate_board(this->board_0, this->board_90, cw_90);
     rotate_board(this->board_0, this->board_180, cw_180);
     rotate_board(this->board_0, this->board_270, acw_90);
+
+    std::cout << all_boards_to_str(*this) << std::endl;
 }
 
 bool in_threat(U8 square) {
@@ -373,6 +406,7 @@ std::unordered_set<U16> Board::get_valid_moves() const {
     }
 
     for (int i=0; i<6; i++) {
+        if (pieces[i] == DEAD) continue;
         auto piece_moves = this->get_moves_for_piece(pieces[i]);
         moves.insert(piece_moves.begin(), piece_moves.end());
     }
@@ -406,7 +440,7 @@ void Board::do_move(U16 move) {
     U8 *pieces = (U8*)this;
     for (int i=0; i<12; i++) {
         if (pieces[i] == p1) {
-            pieces[i] = pos(7,7); // dead
+            pieces[i] = DEAD;
         }
         if (pieces[i] == p0) {
             pieces[i] = p1;
