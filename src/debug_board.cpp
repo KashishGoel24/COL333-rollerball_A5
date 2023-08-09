@@ -10,7 +10,8 @@ int main(int argc, char** argv) {
 
     while (true) {
         std::cout << board_to_str(b->board_0) << std::endl;
-        auto move_set = b->get_valid_moves();
+        
+        auto move_set = b->get_legal_moves();
         std::vector<U16> moves(move_set.begin(), move_set.end());
 
         for (int i=0; i<moves.size(); i++) {

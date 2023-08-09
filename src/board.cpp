@@ -74,6 +74,17 @@ std::unordered_set<U16> construct_bottom_rook_moves_with_board(const U8 p0, cons
 
     if (p0 < 8 || p0 == 13) {
         if (!(board[p0+pos(0,1)] & color)) rook_moves.insert(move(p0, p0+pos(0,1))); // top
+        if (p0 == 1) { // top continued on the edge
+            for (int y = 1; y<=6; y++) {
+                U8 p1 = pos(1, y);
+                if (board[p1]) {
+                    if (board[p1] & color) break;         // our piece
+                    else rook_moves.insert(move(p0, p1)); // their piece - capture
+                    break;
+                }
+                else rook_moves.insert(move(p0, p1));
+            }
+        }
     }
     else {
         if (!(board[p0-pos(0,1)] & color)) rook_moves.insert(move(p0, p0-pos(0,1))); // bottom
@@ -311,7 +322,7 @@ U16 str_to_move(std::string move) {
     return move_promo(pos(x0,y0), pos(x1,y1), promo);
 }
 
-std::unordered_set<U16> Board::get_moves_for_piece(U8 piece_pos) const {
+std::unordered_set<U16> Board::get_pseudolegal_moves_for_piece(U8 piece_pos) const {
 
     std::unordered_set<U16> moves;
     U8 piece_id = this->board_0[piece_pos];
@@ -378,27 +389,41 @@ Board::Board(): board_0{} {
     rotate_board(this->board_0, this->board_90, cw_90);
     rotate_board(this->board_0, this->board_180, cw_180);
     rotate_board(this->board_0, this->board_270, acw_90);
-
-    std::cout << all_boards_to_str(*this) << std::endl;
 }
 
-bool in_threat(U8 square) {
+// Optimization: generate inverse king moves
+// For now, just generate moves of the opposite color and check if any of them
+// attack the king square
+bool Board::in_check() const {
 
-    // check all possible directions from which check may arise, 
-    // then see if there's an enemy piece providing check in that direction
-    //
+    auto pseudolegal_moves = _get_pseudolegal_moves_for_side(this->player_to_play ^ (WHITE | BLACK));
+    auto king_pos = this->w_king;
+    // can make this branchless for kicks but won't add much performance
+    if (this->player_to_play == BLACK) {
+        king_pos = this->b_king;
+    }
+
+    for (auto move : pseudolegal_moves) {
+        if (getp1(move) == king_pos) {
+            std::cout << "move " << move_to_str(move) << " causes check.\n";
+            return true;
+        }
+    }
+
     return false;
-
 }
 
-std::unordered_set<U16> Board::get_valid_moves() const {
+std::unordered_set<U16> Board::get_pseudolegal_moves() const {
+    return _get_pseudolegal_moves_for_side(this->player_to_play);
+}
 
-    std::unordered_set<U16> moves;
+std::unordered_set<U16> Board::_get_pseudolegal_moves_for_side(U8 color) const {
+
+    std::unordered_set<U16> pseudolegal_moves;
 
     U8 *pieces = nullptr;
 
-    // TODO king in check logic
-    if (this->player_to_play == WHITE) {
+    if (color == WHITE) {
         pieces = ((U8*)this) + 6;
     }
     else {
@@ -407,40 +432,84 @@ std::unordered_set<U16> Board::get_valid_moves() const {
 
     for (int i=0; i<6; i++) {
         if (pieces[i] == DEAD) continue;
-        auto piece_moves = this->get_moves_for_piece(pieces[i]);
-        moves.insert(piece_moves.begin(), piece_moves.end());
+        auto piece_moves = this->get_pseudolegal_moves_for_piece(pieces[i]);
+        pseudolegal_moves.insert(piece_moves.begin(), piece_moves.end());
     }
 
-    return moves;
+    return pseudolegal_moves;
 
 }
 
-// void Board::undo_move() {
-// 
-//     U8 *pbs = past_board_states.top();
-//     memcpy(((U8*)this), pbs, 256+12);
-//     delete pbs;
-// }
+Board* Board::copy() const {
+
+    Board *b = new Board();
+    memcpy(b, this, sizeof(Board));
+
+    return b;
+}
+
+// legal move generation:
+// if the king is under check: (Possible optimization, as this should be faster)
+//     Look for moves that protect the king from check
+// else:
+//     Get all pseudolegal moves
+//     for each pseudolegal move for our color:
+//         if doing this move will leave the king in threat from opponent's pieces
+//             don't add the move to legal moves
+//         else
+//             add to legal moves
+//
+// Only implement the else case for now
+std::unordered_set<U16> Board::get_legal_moves() const {
+
+    Board* c = this->copy();
+    auto pseudolegal_moves = get_pseudolegal_moves();
+    std::unordered_set<U16> legal_moves;
+
+    for (auto move : pseudolegal_moves) {
+        c->_do_move(move);
+
+        std::cout << "Checking move " << move_to_str(move) << "\n";
+        if (!c->in_check()) {
+            legal_moves.insert(move);
+        }
+        else {
+            std::cout << move_to_str(move) << " is illegal. Not Adding.\n";
+        }
+
+        c->_undo_move(move);
+    }
+
+    delete c;
+
+    return legal_moves;
+}
 
 void Board::do_move(U16 move) {
+    _do_move(move);
+    _flip_player();
+}
 
-    // this sucks for performance
-    // so let's not do it. Students will implement this as they seem fit.
-    // U8 *pbs = new U8[256+12];
-    // memcpy(pbs, ((U8*)this), 256+12);
-    // past_board_states.push(pbs);
+void Board::_flip_player() {
+    this->player_to_play = (PlayerColor)(this->player_to_play ^ (WHITE | BLACK));
+}
+
+void Board::_do_move(U16 move) {
 
     U8 p0 = getp0(move);
     U8 p1 = getp1(move);
     U8 promo = getpromo(move);
 
     U8 piecetype = this->board_0[p0];
+    this->last_killed_piece = this->board_0[p1];
+    this->last_killed_piece_idx = -1;
 
     // scan and get piece from coord
     U8 *pieces = (U8*)this;
     for (int i=0; i<12; i++) {
         if (pieces[i] == p1) {
             pieces[i] = DEAD;
+            this->last_killed_piece_idx = i;
         }
         if (pieces[i] == p0) {
             pieces[i] = p1;
@@ -448,13 +517,11 @@ void Board::do_move(U16 move) {
     }
 
     if (promo == PAWN_ROOK) {
-        piecetype = (piecetype & 0x60) | ROOK;
+        piecetype = (piecetype & (WHITE | BLACK)) | ROOK;
     }
     else if (promo == PAWN_BISHOP) {
-        piecetype = (piecetype & 0x60) | BISHOP;
+        piecetype = (piecetype & (WHITE | BLACK)) | BISHOP;
     }
-
-    this->player_to_play = (PlayerColor)(this->player_to_play ^ (WHITE | BLACK));
 
     this->board_0[p1]           = piecetype;
     this->board_90[cw_90[p1]]   = piecetype;
@@ -467,3 +534,52 @@ void Board::do_move(U16 move) {
     this->board_270[acw_90[p0]] = 0;
 
 }
+
+void Board::undo_move(U16 move) {
+    _undo_move(move);
+    _flip_player();
+}
+
+void Board::_undo_move(U16 move) {
+
+    U8 p0 = getp0(move);
+    U8 p1 = getp1(move);
+    U8 promo = getpromo(move);
+
+    U8 piecetype = this->board_0[p1];
+    U8 deadpiece = this->last_killed_piece;
+    this->last_killed_piece = 0;
+
+    // scan and get piece from coord
+    U8 *pieces = (U8*)this;
+    if (this->last_killed_piece_idx >= 0) {
+        pieces[this->last_killed_piece_idx] = p1;
+        std::cout << "Set piece " << this->last_killed_piece_idx << "'s position to p1\n";
+        this->last_killed_piece_idx = -1;
+        // TODO check moves where killing the piece doesn't work
+    }
+    for (int i=0; i<12; i++) {
+        if (pieces[i] == p1) {
+            pieces[i] = p0;
+            break;
+        }
+    }
+
+    if (promo == PAWN_ROOK) {
+        piecetype = (piecetype & (WHITE | BLACK)) | ROOK;
+    }
+    else if (promo == PAWN_BISHOP) {
+        piecetype = (piecetype & (WHITE | BLACK)) | BISHOP;
+    }
+
+    this->board_0[p0]           = piecetype;
+    this->board_90[cw_90[p0]]   = piecetype;
+    this->board_180[cw_180[p0]] = piecetype;
+    this->board_270[acw_90[p0]] = piecetype;
+
+    this->board_0[p1]           = deadpiece;
+    this->board_90[cw_90[p1]]   = deadpiece;
+    this->board_180[cw_180[p1]] = deadpiece;
+    this->board_270[acw_90[p1]] = deadpiece;
+}
+

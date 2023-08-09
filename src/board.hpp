@@ -72,19 +72,19 @@ struct Board {
     U8 w_pawn_ws  = pos(2,1);
     U8 w_pawn_bs  = pos(2,0);
     
-    // U8 b_rook_ws  = DEAD;
-    // U8 b_rook_bs  = DEAD;
-    // U8 b_king     = DEAD;
+    // U8 b_rook_ws  = pos(5,6);
+    // U8 b_rook_bs  = pos(6,6);
+    // U8 b_king     = pos(2,6);
     // U8 b_bishop   = DEAD;
-    // U8 b_pawn_ws  = pos(3,0);
-    // U8 b_pawn_bs  = pos(3,1);
+    // U8 b_pawn_ws  = DEAD;
+    // U8 b_pawn_bs  = DEAD;
 
-    // U8 w_rook_ws  = DEAD;
-    // U8 w_rook_bs  = DEAD;
-    // U8 w_king     = DEAD;
+    // U8 w_rook_ws  = pos(0,0);
+    // U8 w_rook_bs  = pos(1,0);
+    // U8 w_king     = pos(4,0);
     // U8 w_bishop   = DEAD;
-    // U8 w_pawn_ws  = pos(3,6);
-    // U8 w_pawn_bs  = pos(3,5);
+    // U8 w_pawn_ws  = DEAD;
+    // U8 w_pawn_bs  = DEAD;
 
     U8 board_0[64];
     U8 board_90[64];
@@ -94,13 +94,24 @@ struct Board {
     // std::stack<U8*> past_board_states;
 
     PlayerColor player_to_play = WHITE;
+    U8 last_killed_piece = 0;
+    int last_killed_piece_idx = -1;
 
     Board();
 
-    std::unordered_set<U16> get_valid_moves() const;
-    std::unordered_set<U16> get_moves_for_piece(U8 piece_pos) const;
+    std::unordered_set<U16> get_pseudolegal_moves() const;
+    std::unordered_set<U16> get_legal_moves() const;
+    std::unordered_set<U16> get_pseudolegal_moves_for_piece(U8 piece_pos) const;
+    bool in_check() const;
+    Board* copy() const;
     void do_move(U16 move);
-    // void undo_move();
+    void undo_move(U16 move);
+
+    private:
+    void _flip_player();
+    void _do_move(U16 move);
+    void _undo_move(U16 move);
+    std::unordered_set<U16> _get_pseudolegal_moves_for_side(U8 color) const;
 };
 
 std::string move_to_str(U16 move);

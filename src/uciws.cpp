@@ -128,7 +128,7 @@ void UCIWSServer::on_stop() {
     e.search = false;
     U16 move = e.best_move;
     this->game_thread.join();
-    assert(b.get_valid_moves().count(move) > 0);
+    assert(b.get_legal_moves().count(move) > 0);
     b.do_move(move);
     server.broadcastMessage("bestmove " + move_to_str(move));
 }

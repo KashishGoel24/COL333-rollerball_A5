@@ -8,7 +8,7 @@
 void Engine::find_best_move(const Board& b) {
 
     // naively pick the first move
-    auto moveset = b.get_valid_moves();
+    auto moveset = b.get_legal_moves();
     if (moveset.size() == 0) {
         this->best_move = 0;
     }
