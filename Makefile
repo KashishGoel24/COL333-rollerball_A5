@@ -8,6 +8,9 @@ INCLUDES=-Iinclude #-I/opt/homebrew/opt/openssl@1.1/include/
 rollerball:
 	$(CC) $(CFLAGS) $(INCLUDES) src/server.cpp src/board.cpp src/engine.cpp src/rollerball.cpp src/uciws.cpp -o bin/rollerball
 
+lib:
+	$(CC) $(CFLAGS) $(INCLUDES) -shared src/board.cpp -o bin/librollerball.so
+
 dbg_frontend: src/debug_frontend.cpp 
 	$(CC) $(CFLAGS) $(INCLUDES) src/server.cpp src/debug_frontend.cpp -o bin/debug_frontend
 

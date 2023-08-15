@@ -404,11 +404,13 @@ bool Board::in_check() const {
     }
 
     for (auto move : pseudolegal_moves) {
+        // std::cout << move_to_str(move) << " ";
         if (getp1(move) == king_pos) {
-            std::cout << "move " << move_to_str(move) << " causes check.\n";
+            // std::cout << "<- causes check\n";
             return true;
         }
     }
+    // std::cout << std::endl;
 
     return false;
 }
@@ -469,7 +471,7 @@ std::unordered_set<U16> Board::get_legal_moves() const {
     for (auto move : pseudolegal_moves) {
         c->_do_move(move);
 
-        std::cout << "Checking move " << move_to_str(move) << "\n";
+        // std::cout << "Checking move " << move_to_str(move) << ", curr player is " << c->player_to_play << "\n";
         if (!c->in_check()) {
             legal_moves.insert(move);
         }
@@ -509,6 +511,7 @@ void Board::_do_move(U16 move) {
     for (int i=0; i<12; i++) {
         if (pieces[i] == p1) {
             pieces[i] = DEAD;
+            // std::cout << "Killed piece " << i << "\n";
             this->last_killed_piece_idx = i;
         }
         if (pieces[i] == p0) {
@@ -554,7 +557,7 @@ void Board::_undo_move(U16 move) {
     U8 *pieces = (U8*)this;
     if (this->last_killed_piece_idx >= 0) {
         pieces[this->last_killed_piece_idx] = p1;
-        std::cout << "Set piece " << this->last_killed_piece_idx << "'s position to p1\n";
+        // std::cout << "Set piece " << this->last_killed_piece_idx << "'s position to " << (int)getx(p1) << "," << (int)gety(p1) << "\n";
         this->last_killed_piece_idx = -1;
         // TODO check moves where killing the piece doesn't work
     }
@@ -581,5 +584,6 @@ void Board::_undo_move(U16 move) {
     this->board_90[cw_90[p1]]   = deadpiece;
     this->board_180[cw_180[p1]] = deadpiece;
     this->board_270[acw_90[p1]] = deadpiece;
-}
 
+    // std::cout << all_boards_to_str(*this);
+}

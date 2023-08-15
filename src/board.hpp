@@ -72,17 +72,17 @@ struct Board {
     U8 w_pawn_ws  = pos(2,1);
     U8 w_pawn_bs  = pos(2,0);
     
-    // U8 b_rook_ws  = pos(5,6);
-    // U8 b_rook_bs  = pos(6,6);
-    // U8 b_king     = pos(2,6);
+    // U8 b_rook_ws  = pos(6,0);
+    // U8 b_rook_bs  = DEAD;
+    // U8 b_king     = DEAD;
     // U8 b_bishop   = DEAD;
     // U8 b_pawn_ws  = DEAD;
     // U8 b_pawn_bs  = DEAD;
 
-    // U8 w_rook_ws  = pos(0,0);
-    // U8 w_rook_bs  = pos(1,0);
-    // U8 w_king     = pos(4,0);
-    // U8 w_bishop   = DEAD;
+    // U8 w_rook_ws  = DEAD;
+    // U8 w_rook_bs  = DEAD;
+    // U8 w_king     = pos(5,1);
+    // U8 w_bishop   = pos(1,3);
     // U8 w_pawn_ws  = DEAD;
     // U8 w_pawn_bs  = DEAD;
 

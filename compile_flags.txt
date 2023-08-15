@@ -1,4 +1,6 @@
 -Iinclude
 -I/opt/homebrew/opt/openssl@1.1/include/
+-I/opt/homebrew/Caskroom/miniforge/base/envs/rollerball/lib/python3.11/site-packages/pybind11/include/
+-I/opt/homebrew/Caskroom/miniforge/base/envs/rollerball/include/python3.11/
 -std=c++17
 -DASIO_STANDALONE

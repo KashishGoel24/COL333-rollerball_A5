@@ -15,7 +15,7 @@ const state = reactive({
     game_btn_text: 'Start Game',
 
     left_info: 'rollerball v.1.0',
-    right_info: 'Copyright COL333 TAs',
+    right_info: 'Aug 9, 2023',
 
     ws_white: null,
     ws_black: null,
@@ -42,12 +42,10 @@ class Game {
                 d7: 'bB',
                 e6: 'bP',
                 e7: 'bP'
-                // a1: 'wR',
-                // b1: 'wR',
-                // e1: 'wK',
-                // c7: 'bK',
-                // f7: 'bR',
-                // g7: 'bR'
+
+                // f2: 'wK',
+                // g1: 'bR',
+                // b4: 'wB'
             }
         })
 
