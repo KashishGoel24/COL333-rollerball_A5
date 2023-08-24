@@ -58,33 +58,33 @@ enum Promotion {
 struct BoardData {
 
     // DO NOT add any fields above this
-    // U8 b_rook_ws  = pos(2,5);
-    // U8 b_rook_bs  = pos(2,6);
-    // U8 b_king     = pos(3,5);
-    // U8 b_bishop   = pos(3,6);
-    // U8 b_pawn_ws  = pos(4,5);
-    // U8 b_pawn_bs  = pos(4,6);
+    U8 b_rook_ws  = pos(2,5);
+    U8 b_rook_bs  = pos(2,6);
+    U8 b_king     = pos(3,5);
+    U8 b_bishop   = pos(3,6);
+    U8 b_pawn_ws  = pos(4,5);
+    U8 b_pawn_bs  = pos(4,6);
 
-    // U8 w_rook_ws  = pos(4,1);
-    // U8 w_rook_bs  = pos(4,0);
-    // U8 w_king     = pos(3,1);
-    // U8 w_bishop   = pos(3,0);
-    // U8 w_pawn_ws  = pos(2,1);
-    // U8 w_pawn_bs  = pos(2,0);
+    U8 w_rook_ws  = pos(4,1);
+    U8 w_rook_bs  = pos(4,0);
+    U8 w_king     = pos(3,1);
+    U8 w_bishop   = pos(3,0);
+    U8 w_pawn_ws  = pos(2,1);
+    U8 w_pawn_bs  = pos(2,0);
     
-    U8 b_rook_ws  = DEAD;
-    U8 b_rook_bs  = DEAD;
-    U8 b_king     = DEAD;
-    U8 b_bishop   = pos(4,1);
-    U8 b_pawn_ws  = DEAD;
-    U8 b_pawn_bs  = DEAD;
+    // U8 b_rook_ws  = DEAD;
+    // U8 b_rook_bs  = DEAD;
+    // U8 b_king     = DEAD;
+    // U8 b_bishop   = pos(4,1);
+    // U8 b_pawn_ws  = DEAD;
+    // U8 b_pawn_bs  = DEAD;
 
-    U8 w_rook_ws  = DEAD;
-    U8 w_rook_bs  = DEAD;
-    U8 w_king     = pos(6,1);
-    U8 w_bishop   = DEAD;
-    U8 w_pawn_ws  = DEAD;
-    U8 w_pawn_bs  = DEAD;
+    // U8 w_rook_ws  = DEAD;
+    // U8 w_rook_bs  = DEAD;
+    // U8 w_king     = pos(6,1);
+    // U8 w_bishop   = DEAD;
+    // U8 w_pawn_ws  = DEAD;
+    // U8 w_pawn_bs  = DEAD;
 
     U8 board_0[64];
     U8 board_90[64];

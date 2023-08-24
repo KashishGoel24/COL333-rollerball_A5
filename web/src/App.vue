@@ -3,8 +3,8 @@ import ChessBoard from 'chessboardjs-vue3';
 import {onMounted, reactive} from 'vue';
 
 const state = reactive({
-    white_port: 8181,
-    black_port: 8182,
+    white_address: 'localhost:8181',
+    black_address: 'localhost:8182',
     thinking_time: 2,
 
     w_conn_btn_state: 'button-to-connect',
@@ -15,7 +15,7 @@ const state = reactive({
     game_btn_text: 'Start Game',
 
     left_info: 'rollerball v.1.0',
-    right_info: 'Aug 9, 2023',
+    right_info: 'Rev. Aug 24, 2023',
 
     ws_white: null,
     ws_black: null,
@@ -157,7 +157,7 @@ function connect_white() {
 
     state.w_conn_btn_state = 'button-connecting';
     state.w_conn_btn_text = 'Connecting White Bot';
-    state.ws_white = new WebSocket(`ws://localhost:${state.white_port}`);
+    state.ws_white = new WebSocket(`ws://${state.white_address}`);
 
     state.ws_white.onopen = (event) => {
         state.ws_white.send("uci");
@@ -183,7 +183,7 @@ function connect_black() {
 
     state.b_conn_btn_state = 'button-connecting';
     state.b_conn_btn_text = 'Connecting Black Bot';
-    state.ws_black = new WebSocket(`ws://localhost:${state.black_port}`);
+    state.ws_black = new WebSocket(`ws://${state.black_address}`);
 
     state.ws_black.onopen = (event) => {
         state.ws_black.send("uci");
@@ -209,12 +209,12 @@ function connect_black() {
 
 <form>
     <div class='field-pad'>
-        <label for="white_port">White port:</label>
-        <input type="number" id="white_port" v-model.number="state.white_port" placeholder="white port">
+        <label for="white_address">White Address:</label>
+        <input id="white_address" v-model.number="state.white_address" placeholder="white address">
     </div>
     <div class='field-pad'>
-        <label for="black_port">Black port:</label>
-        <input type="number" id="black_port" v-model.number="state.black_port" placeholder="black port">
+        <label for="black_address">Black Address:</label>
+        <input id="black_address" v-model.number="state.black_address" placeholder="black address">
     </div>
     <div class='field-pad'>
         <label for="thinking_time">Thinking time:</label>
@@ -324,7 +324,12 @@ label {
 
 input[type=number] {
   width: 60px;
+}
+
+input {
+  width: 150px;
   padding: 4px;
+  font-family: monospace;
   background-color: var(--vt-c-black);
   border: none;
   text-align: center;
