@@ -14,5 +14,5 @@ PYBIND11_MODULE(board, m) {
         .def("in_check", &Board::in_check)
         .def("copy", &Board::copy)
         .def("do_move", &Board::do_move)
-        .def("undo_move", &Board::undo_move);
+        .def("undo_last_move", &Board::undo_last_move);
 }

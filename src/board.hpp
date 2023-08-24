@@ -99,19 +99,19 @@ struct Board {
 
     Board();
 
-    std::unordered_set<U16> get_pseudolegal_moves() const;
-    std::unordered_set<U16> get_legal_moves() const;
-    std::unordered_set<U16> get_pseudolegal_moves_for_piece(U8 piece_pos) const;
-    bool in_check() const;
-    Board* copy() const;
+    std::unordered_set<U16> get_pseudolegal_moves();
+    std::unordered_set<U16> get_legal_moves();
+    std::unordered_set<U16> get_pseudolegal_moves_for_piece(U8 piece_pos);
+    bool in_check();
+    Board* copy();
     void do_move(U16 move);
-    void undo_move(U16 move);
+    void undo_last_move(U16 move);
 
     private:
     void _flip_player();
     void _do_move(U16 move);
-    void _undo_move(U16 move);
-    std::unordered_set<U16> _get_pseudolegal_moves_for_side(U8 color) const;
+    void _undo_last_move(U16 move);
+    std::unordered_set<U16> _get_pseudolegal_moves_for_side(U8 color);
 };
 
 std::string move_to_str(U16 move);

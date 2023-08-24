@@ -322,7 +322,7 @@ U16 str_to_move(std::string move) {
     return move_promo(pos(x0,y0), pos(x1,y1), promo);
 }
 
-std::unordered_set<U16> Board::get_pseudolegal_moves_for_piece(U8 piece_pos) const {
+std::unordered_set<U16> Board::get_pseudolegal_moves_for_piece(U8 piece_pos) {
 
     std::unordered_set<U16> moves;
     U8 piece_id = this->board_0[piece_pos];
@@ -394,7 +394,7 @@ Board::Board(): board_0{} {
 // Optimization: generate inverse king moves
 // For now, just generate moves of the opposite color and check if any of them
 // attack the king square
-bool Board::in_check() const {
+bool Board::in_check() {
 
     auto pseudolegal_moves = _get_pseudolegal_moves_for_side(this->player_to_play ^ (WHITE | BLACK));
     auto king_pos = this->w_king;
@@ -415,11 +415,11 @@ bool Board::in_check() const {
     return false;
 }
 
-std::unordered_set<U16> Board::get_pseudolegal_moves() const {
+std::unordered_set<U16> Board::get_pseudolegal_moves() {
     return _get_pseudolegal_moves_for_side(this->player_to_play);
 }
 
-std::unordered_set<U16> Board::_get_pseudolegal_moves_for_side(U8 color) const {
+std::unordered_set<U16> Board::_get_pseudolegal_moves_for_side(U8 color) {
 
     std::unordered_set<U16> pseudolegal_moves;
 
@@ -442,7 +442,7 @@ std::unordered_set<U16> Board::_get_pseudolegal_moves_for_side(U8 color) const {
 
 }
 
-Board* Board::copy() const {
+Board* Board::copy() {
 
     Board *b = new Board();
     memcpy(b, this, sizeof(Board));
@@ -462,28 +462,38 @@ Board* Board::copy() const {
 //             add to legal moves
 //
 // Only implement the else case for now
-std::unordered_set<U16> Board::get_legal_moves() const {
+std::unordered_set<U16> Board::get_legal_moves() {
 
-    Board* c = this->copy();
     auto pseudolegal_moves = get_pseudolegal_moves();
     std::unordered_set<U16> legal_moves;
 
+    std::cout << "Pseudolegal Moves: ";
     for (auto move : pseudolegal_moves) {
-        c->_do_move(move);
+        std::cout << move_to_str(move) << " ";
+    }
+    std::cout << "\n";
+
+    std::cout << "Illegal Moves: ";
+    for (auto move : pseudolegal_moves) {
+        _do_move(move);
 
         // std::cout << "Checking move " << move_to_str(move) << ", curr player is " << c->player_to_play << "\n";
-        if (!c->in_check()) {
+        if (!in_check()) {
             legal_moves.insert(move);
         }
         else {
-            std::cout << move_to_str(move) << " is illegal. Not Adding.\n";
+            std::cout << move_to_str(move) << " ";
         }
 
-        c->_undo_move(move);
+        _undo_last_move(move);
     }
+    std::cout << "\n";
 
-    delete c;
-
+    std::cout << "Legal Moves: ";
+    for (auto move : legal_moves) {
+        std::cout << move_to_str(move) << " ";
+    }
+    std::cout << "\n";
     return legal_moves;
 }
 
@@ -538,12 +548,12 @@ void Board::_do_move(U16 move) {
 
 }
 
-void Board::undo_move(U16 move) {
-    _undo_move(move);
+void Board::undo_last_move(U16 move) {
+    _undo_last_move(move);
     _flip_player();
 }
 
-void Board::_undo_move(U16 move) {
+void Board::_undo_last_move(U16 move) {
 
     U8 p0 = getp0(move);
     U8 p1 = getp1(move);
