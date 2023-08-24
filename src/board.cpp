@@ -190,7 +190,7 @@ std::unordered_set<U16> construct_bottom_bishop_moves_with_board(const U8 p0, co
     if (p0 < 6 || p0 >= 12) {
         p1s.push_back(pos(getx(p0)+1,gety(p0)+1));
     }
-    else if (p0 > 9) {
+    if (p0 > 9) {
         p1s.push_back(pos(getx(p0)+1,gety(p0)-1));
     }
 
@@ -307,13 +307,7 @@ std::string all_boards_to_str(const Board& b) {
         board_str[i] = '\n';
     }
 
-    return // "P2P: " + player_to_play_to_str(b) + "\n" + 
-           // "LKP: " + piece_to_char(b.data.last_killed_piece) + "\n" + 
-           // "LKP_idx: " + std::to_string(b.data.last_killed_piece_idx) + "\n" + 
-           // "K: " + move_to_str(move(0, b.data.w_king)) + "\n" + 
-           // "p: " + move_to_str(move(0, b.data.b_pawn_ws)) + "\n" + 
-           // "r: " + move_to_str(move(0, b.data.b_rook_ws)) + "\n" + 
-           board_str.substr(32);
+    return board_str.substr(32);
 }
 
 std::string move_to_str(U16 move) {
@@ -438,7 +432,7 @@ bool Board::in_check() const {
             return true;
         }
     }
-    std::cout << std::endl;
+    // std::cout << std::endl;
 
     return false;
 }
@@ -449,7 +443,7 @@ std::unordered_set<U16> Board::get_pseudolegal_moves() const {
 
 std::unordered_set<U16> Board::_get_pseudolegal_moves_for_side(U8 color) const {
 
-    std::cout << "Getting Pseudolegal moves for " << (char)((color>>5) + 'a') << "\n";
+    // std::cout << "Getting Pseudolegal moves for " << (char)((color>>5) + 'a') << "\n";
     std::unordered_set<U16> pseudolegal_moves;
 
     U8 *pieces = (U8*)(&(this->data));
@@ -496,35 +490,18 @@ std::unordered_set<U16> Board::get_legal_moves() const {
     auto pseudolegal_moves = get_pseudolegal_moves();
     std::unordered_set<U16> legal_moves;
 
-    std::cout << "Pseudolegal Moves: ";
-    for (auto move : pseudolegal_moves) {
-        std::cout << move_to_str(move) << " ";
-    }
-    std::cout << "\n";
-
     for (auto move : pseudolegal_moves) {
         c->_do_move(move);
-        // std::cout << "Move " << move_to_str(move) << ": ";
 
-        // std::cout << "Checking move " << move_to_str(move) << ", curr player is " << c->player_to_play << "\n";
         if (!c->in_check()) {
             legal_moves.insert(move);
-        }
-        else {
-            // std::cout << move_to_str(move) << " ";
         }
 
         c->_undo_last_move(move);
     }
-    std::cout << "\n";
 
     delete c;
 
-    std::cout << "Legal Moves: ";
-    for (auto move : legal_moves) {
-        std::cout << move_to_str(move) << " ";
-    }
-    std::cout << "\n";
     return legal_moves;
 }
 
