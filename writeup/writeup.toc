@@ -1,0 +1,20 @@
+\contentsline {section}{\numberline {1}Goal}{2}{section.1}%
+\contentsline {section}{\numberline {2}The Game of Rollerball}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Starting Position}{2}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Movement Rules}{2}{subsection.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.1}Rook}{2}{subsubsection.2.2.1}%
+\contentsline {subsubsection}{\numberline {2.2.2}Bishop}{3}{subsubsection.2.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.3}King}{3}{subsubsection.2.2.3}%
+\contentsline {subsubsection}{\numberline {2.2.4}Pawn}{3}{subsubsection.2.2.4}%
+\contentsline {subsection}{\numberline {2.3}Objective}{3}{subsection.2.3}%
+\contentsline {section}{\numberline {3}Scoring}{3}{section.3}%
+\contentsline {section}{\numberline {4}Starter Code Overview}{3}{section.4}%
+\contentsline {subsection}{\numberline {4.1}The Board struct}{3}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Positions, Moves and Board Representation}{3}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Pseudolegal Move Generation}{3}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Legal Move Generation}{3}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Frontend Protocol}{3}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Python Starter Code}{3}{subsection.4.6}%
+\contentsline {section}{\numberline {5}Submission Details}{3}{section.5}%
+\contentsline {section}{\numberline {6}Phases}{3}{section.6}%
+\contentsline {section}{\numberline {7}General Guidelines}{3}{section.7}%
