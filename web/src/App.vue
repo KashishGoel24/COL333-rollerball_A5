@@ -43,9 +43,9 @@ class Game {
                 e6: 'bP',
                 e7: 'bP'
 
-                // f2: 'wK',
-                // g1: 'bR',
-                // b4: 'wB'
+                // f1: 'bR',
+                // e1: 'bP',
+                // d1: 'wK'
             }
         })
 
