@@ -55,7 +55,7 @@ enum Promotion {
     PAWN_ROOK   = (1<<7)
 };
 
-struct Board {
+struct BoardData {
 
     // DO NOT add any fields above this
     U8 b_rook_ws  = pos(2,5);
@@ -72,17 +72,17 @@ struct Board {
     U8 w_pawn_ws  = pos(2,1);
     U8 w_pawn_bs  = pos(2,0);
     
-    // U8 b_rook_ws  = pos(6,0);
+    // U8 b_rook_ws  = DEAD;
     // U8 b_rook_bs  = DEAD;
     // U8 b_king     = DEAD;
-    // U8 b_bishop   = DEAD;
+    // U8 b_bishop   = pos(4,1);
     // U8 b_pawn_ws  = DEAD;
     // U8 b_pawn_bs  = DEAD;
 
     // U8 w_rook_ws  = DEAD;
     // U8 w_rook_bs  = DEAD;
-    // U8 w_king     = pos(5,1);
-    // U8 w_bishop   = pos(1,3);
+    // U8 w_king     = pos(6,1);
+    // U8 w_bishop   = DEAD;
     // U8 w_pawn_ws  = DEAD;
     // U8 w_pawn_bs  = DEAD;
 
@@ -97,6 +97,12 @@ struct Board {
     U8 last_killed_piece = 0;
     int last_killed_piece_idx = -1;
 
+};
+
+struct Board {
+
+    BoardData data;
+
     Board();
 
     std::unordered_set<U16> get_pseudolegal_moves() const;
@@ -105,12 +111,12 @@ struct Board {
     bool in_check() const;
     Board* copy() const;
     void do_move(U16 move);
-    void undo_move(U16 move);
+    void undo_last_move(U16 move);
 
     private:
     void _flip_player();
     void _do_move(U16 move);
-    void _undo_move(U16 move);
+    void _undo_last_move(U16 move);
     std::unordered_set<U16> _get_pseudolegal_moves_for_side(U8 color) const;
 };
 

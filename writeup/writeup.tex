@@ -1,0 +1,187 @@
+\documentclass[10pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[OT1]{fontenc}
+\usepackage[table,usenames,dvipsnames]{xcolor}
+\usepackage{array}
+\usepackage{varwidth}
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{parskip}
+\usepackage{hyperref}
+\usepackage{forest}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{tcolorbox}
+\usepackage{forest}
+\usepackage{chessfss}
+\usepackage{tikz}
+\usetikzlibrary{matrix}
+\usetikzlibrary{patterns}
+
+\renewcommand*\familydefault{\sfdefault}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{lightsq}{RGB}{247, 208, 164}
+\definecolor{darksq}{RGB}{199, 142, 83}
+
+\newcommand{\chessboard}{
+    \foreach \x in {0,1,...,\numexpr\boardsize-1}{
+        \foreach \y in {0,1,...,\numexpr\boardsize-1}{
+            \pgfmathtruncatemacro{\shade}{mod(\x+\y,2)}
+            \ifnum\shade=0
+                \fill[darksq] (\x, \y) rectangle ++(1,1);
+            \else
+                \fill[lightsq] (\x, \y) rectangle ++(1,1);
+            \fi
+        }
+    }
+    % Draw the hole
+    \fill[white] ({(\boardsize - \holesize)/2}, {(\boardsize - \holesize)/2}) rectangle ++(\holesize, \holesize);
+
+    % cut corners
+    \fill[white] (-0.01,-0.01) -- (-0.01,\cornercut) -- (\cornercut,-0.01) -- cycle;
+    \fill[white] (\boardsize+0.01,\boardsize+0.01) -- (\boardsize+0.01,\boardsize-\cornercut) -- (\boardsize-\cornercut,\boardsize+0.01) -- cycle;
+    \fill[white] (-0.01,\boardsize) -- (-0.01,\boardsize-\cornercut) -- (\cornercut,\boardsize+0.01) -- cycle;
+    \fill[white] (\boardsize,-0.01) -- (\boardsize+0.01,\cornercut) -- (\boardsize-\cornercut,-0.01) -- cycle;
+}
+
+\newtcolorbox{mybox}[3][]
+{
+  colframe = #2!25,
+  colback  = #2!10,
+  coltitle = #2!20!black,  
+  title    = {#3},
+  #1,
+}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={Overleaf Example},
+    pdfpagemode=FullScreen,
+}
+
+\setfigfontfamily{alpha}
+
+\newcommand{\boardsize}{7}
+\newcommand{\holesize}{3}
+\newcommand{\cornercut}{0.3}
+
+\title{%
+  \textbf{Rollerball} \\
+  {\large (COL333 Assignment 2)}
+}
+\author{COL333 TAs}
+\date{September 2022}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\clearpage
+
+\section{Goal}
+
+\section{The Game of Rollerball}
+
+
+\begin{figure}[!htbp]
+\centering
+\begin{tikzpicture}[scale=1]
+    \pgfgettransformentries{\a}{\b}{\c}{\d}{\xtrans}{\ytrans}
+    \chessboard
+
+    % row labels
+    \foreach \row [count=\i] in {a,b,c,d,e,f} {
+        \node at (\i-0.1, 0.1) {\tiny \row};
+    }
+    % column labels
+    \foreach \col [count=\i] in {1,2,3,4,5,6} {
+        \node at (0.1, \i-0.1) {\tiny \col};
+    }
+
+    \node at (2.5, 5.5) {\includegraphics[width=\a cm]{pieces/bR.pdf}};
+    \node at (3.5, 5.5) {\includegraphics[width=\a cm]{pieces/bK.pdf}};
+    \node at (4.5, 5.5) {\includegraphics[width=\a cm]{pieces/bP.pdf}};
+    \node at (2.5, 6.5) {\includegraphics[width=\a cm]{pieces/bR.pdf}};
+    \node at (3.5, 6.5) {\includegraphics[width=\a cm]{pieces/bB.pdf}};
+    \node at (4.5, 6.5) {\includegraphics[width=\a cm]{pieces/bP.pdf}};
+
+    \node at (2.5, 0.5) {\includegraphics[width=\a cm]{pieces/wP.pdf}};
+    \node at (3.5, 0.5) {\includegraphics[width=\a cm]{pieces/wB.pdf}};
+    \node at (4.5, 0.5) {\includegraphics[width=\a cm]{pieces/wR.pdf}};
+    \node at (2.5, 1.5) {\includegraphics[width=\a cm]{pieces/wP.pdf}};
+    \node at (3.5, 1.5) {\includegraphics[width=\a cm]{pieces/wK.pdf}};
+    \node at (4.5, 1.5) {\includegraphics[width=\a cm]{pieces/wR.pdf}};
+\end{tikzpicture}
+\end{figure}
+ 
+\subsection{Starting Position}
+
+\subsection{Movement Rules}
+
+\subsubsection{Rook}
+
+\begin{figure}[!htbp]
+\centering
+\begin{tikzpicture}[scale=0.5]
+    \pgfgettransformentries{\a}{\b}{\c}{\d}{\xtrans}{\ytrans}
+    \chessboard
+    \node at (4.5, 1.5) {\includegraphics[width=\a cm]{pieces/wR.pdf}};
+\end{tikzpicture}
+\begin{tikzpicture}[scale=0.5]
+    \pgfgettransformentries{\a}{\b}{\c}{\d}{\xtrans}{\ytrans}
+    \chessboard
+    \node at (4.5, 1.5) {\includegraphics[width=\a cm]{pieces/wR.pdf}};
+\end{tikzpicture}
+\begin{tikzpicture}[scale=0.5]
+    \pgfgettransformentries{\a}{\b}{\c}{\d}{\xtrans}{\ytrans}
+    \chessboard
+    \node at (4.5, 1.5) {\includegraphics[width=\a cm]{pieces/wR.pdf}};
+\end{tikzpicture}
+\begin{tikzpicture}[scale=0.5]
+    \pgfgettransformentries{\a}{\b}{\c}{\d}{\xtrans}{\ytrans}
+    \chessboard
+    \node at (4.5, 1.5) {\includegraphics[width=\a cm]{pieces/wR.pdf}};
+\end{tikzpicture}
+\end{figure}
+
+\subsubsection{Bishop}
+
+\subsubsection{King}
+
+\subsubsection{Pawn}
+
+\subsection{Objective}
+
+\section{Scoring}
+
+\section{Starter Code Overview}
+
+\subsection{The Board struct}
+
+\subsection{Positions, Moves and Board Representation}
+
+\subsection{Pseudolegal Move Generation}
+
+\subsection{Legal Move Generation}
+
+\subsection{Frontend Protocol}
+
+\subsection{Python Starter Code}
+
+\section{Submission Details}
+
+\section{Phases}
+
+\section{General Guidelines} 
+
+\end{document}

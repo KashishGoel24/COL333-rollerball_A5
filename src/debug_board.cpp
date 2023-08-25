@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
     Board *b = new Board();
 
     while (true) {
-        std::cout << board_to_str(b->board_0) << std::endl;
+        std::cout << board_to_str(b->data.board_0) << std::endl;
         
         auto move_set = b->get_legal_moves();
         std::vector<U16> moves(move_set.begin(), move_set.end());

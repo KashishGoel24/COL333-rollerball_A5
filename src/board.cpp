@@ -187,6 +187,14 @@ std::unordered_set<U16> construct_bottom_bishop_moves_with_board(const U8 p0, co
         p1s.push_back(pos(3,1));
     }
 
+    // back 
+    if (p0 < 6 || p0 >= 12) {
+        p1s.push_back(pos(getx(p0)+1,gety(p0)+1));
+    }
+    if (p0 > 9) {
+        p1s.push_back(pos(getx(p0)+1,gety(p0)-1));
+    }
+
     for (auto p1 : p1s) {
         if (board[p1]) {
             if (board[p1] & color) break;           // our piece
@@ -270,12 +278,24 @@ std::string board_to_str(const U8 *board) {
     return board_str;
 }
 
+std::string player_to_play_to_str(const Board& b) {
+    if (b.data.player_to_play == WHITE) {
+        return "WHITE";
+    }
+    else if (b.data.player_to_play == BLACK) {
+        return "BLACK";
+    }
+    else {
+        return "UNKNOWN";
+    }
+}
+
 std::string all_boards_to_str(const Board& b) {
 
     std::string board_str(256, ' ');
     std::string board_mask = ".......\n.......\n..   ..\n..   ..\n..   ..\n.......\n.......\n";
 
-    const U8 (*boards)[64] = &(b.board_0);
+    const U8 (*boards)[64] = &(b.data.board_0);
 
     for (int b=0; b<4; b++) {
         for (int i=0; i<56; i++) {
@@ -288,7 +308,7 @@ std::string all_boards_to_str(const Board& b) {
         board_str[i] = '\n';
     }
 
-    return board_str;
+    return board_str.substr(32);
 }
 
 std::string move_to_str(U16 move) {
@@ -326,19 +346,19 @@ U16 str_to_move(std::string move) {
 std::unordered_set<U16> Board::get_pseudolegal_moves_for_piece(U8 piece_pos) const {
 
     std::unordered_set<U16> moves;
-    U8 piece_id = this->board_0[piece_pos];
+    U8 piece_id = this->data.board_0[piece_pos];
 
     std::unordered_set<U8> bottom({ 1, 2, 3, 4, 5, 6, 10, 11, 12, 13 });
     std::unordered_set<U8> left({ 0, 8, 16, 24, 32, 40, 9, 17, 25, 33 });
     std::unordered_set<U8> top({ 48, 49, 50, 51, 52, 53, 41, 42, 43, 44 });
     std::unordered_set<U8> right({ 54, 46, 38, 30, 22, 14, 45, 37, 29, 21 });
 
-    const U8 *board = this->board_0;
+    const U8 *board = this->data.board_0;
     const U8 *coord_map = id;
     const U8 *inv_coord_map = id;
-    if      (left.count(piece_pos))  { board = this->board_270;  coord_map = acw_90; inv_coord_map = cw_90;  }
-    else if (top.count(piece_pos))   { board = this->board_180; coord_map = cw_180; inv_coord_map = cw_180; }
-    else if (right.count(piece_pos)) { board = this->board_90; coord_map = cw_90;  inv_coord_map = acw_90; }
+    if      (left.count(piece_pos))  { board = this->data.board_270;  coord_map = acw_90; inv_coord_map = cw_90;  }
+    else if (top.count(piece_pos))   { board = this->data.board_180; coord_map = cw_180; inv_coord_map = cw_180; }
+    else if (right.count(piece_pos)) { board = this->data.board_90; coord_map = cw_90;  inv_coord_map = acw_90; }
 
     if (piece_id & PAWN) {
         if (((piece_pos == 51 || piece_pos == 43) && (piece_id & WHITE)) || 
@@ -371,25 +391,25 @@ void rotate_board(U8 *src, U8 *tgt, const U8 *transform) {
     }
 }
 
-Board::Board(): board_0{} {
+Board::Board(): data{} {
 
-    this->board_0[this->b_rook_ws]  = BLACK | ROOK;
-    this->board_0[this->b_rook_bs]  = BLACK | ROOK;
-    this->board_0[this->b_king   ]  = BLACK | KING;
-    this->board_0[this->b_bishop ]  = BLACK | BISHOP;
-    this->board_0[this->b_pawn_ws]  = BLACK | PAWN;
-    this->board_0[this->b_pawn_bs]  = BLACK | PAWN;
+    this->data.board_0[this->data.b_rook_ws]  = BLACK | ROOK;
+    this->data.board_0[this->data.b_rook_bs]  = BLACK | ROOK;
+    this->data.board_0[this->data.b_king   ]  = BLACK | KING;
+    this->data.board_0[this->data.b_bishop ]  = BLACK | BISHOP;
+    this->data.board_0[this->data.b_pawn_ws]  = BLACK | PAWN;
+    this->data.board_0[this->data.b_pawn_bs]  = BLACK | PAWN;
 
-    this->board_0[this->w_rook_ws]  = WHITE | ROOK;
-    this->board_0[this->w_rook_bs]  = WHITE | ROOK;
-    this->board_0[this->w_king   ]  = WHITE | KING;
-    this->board_0[this->w_bishop ]  = WHITE | BISHOP;
-    this->board_0[this->w_pawn_ws]  = WHITE | PAWN;
-    this->board_0[this->w_pawn_bs]  = WHITE | PAWN;
+    this->data.board_0[this->data.w_rook_ws]  = WHITE | ROOK;
+    this->data.board_0[this->data.w_rook_bs]  = WHITE | ROOK;
+    this->data.board_0[this->data.w_king   ]  = WHITE | KING;
+    this->data.board_0[this->data.w_bishop ]  = WHITE | BISHOP;
+    this->data.board_0[this->data.w_pawn_ws]  = WHITE | PAWN;
+    this->data.board_0[this->data.w_pawn_bs]  = WHITE | PAWN;
 
-    rotate_board(this->board_0, this->board_90, cw_90);
-    rotate_board(this->board_0, this->board_180, cw_180);
-    rotate_board(this->board_0, this->board_270, acw_90);
+    rotate_board(this->data.board_0, this->data.board_90, cw_90);
+    rotate_board(this->data.board_0, this->data.board_180, cw_180);
+    rotate_board(this->data.board_0, this->data.board_270, acw_90);
 }
 
 // Optimization: generate inverse king moves
@@ -397,11 +417,13 @@ Board::Board(): board_0{} {
 // attack the king square
 bool Board::in_check() const {
 
-    auto pseudolegal_moves = _get_pseudolegal_moves_for_side(this->player_to_play ^ (WHITE | BLACK));
-    auto king_pos = this->w_king;
+    // std::cout << "Checking if " << player_to_play_to_str(*this) << " is in check\n";
+
+    auto pseudolegal_moves = this->_get_pseudolegal_moves_for_side(this->data.player_to_play ^ (WHITE | BLACK));
+    auto king_pos = this->data.w_king;
     // can make this branchless for kicks but won't add much performance
-    if (this->player_to_play == BLACK) {
-        king_pos = this->b_king;
+    if (this->data.player_to_play == BLACK) {
+        king_pos = this->data.b_king;
     }
 
     for (auto move : pseudolegal_moves) {
@@ -417,24 +439,24 @@ bool Board::in_check() const {
 }
 
 std::unordered_set<U16> Board::get_pseudolegal_moves() const {
-    return _get_pseudolegal_moves_for_side(this->player_to_play);
+    return _get_pseudolegal_moves_for_side(this->data.player_to_play);
 }
 
 std::unordered_set<U16> Board::_get_pseudolegal_moves_for_side(U8 color) const {
 
+    // std::cout << "Getting Pseudolegal moves for " << (char)((color>>5) + 'a') << "\n";
     std::unordered_set<U16> pseudolegal_moves;
 
-    U8 *pieces = nullptr;
+    U8 *pieces = (U8*)(&(this->data));
 
     if (color == WHITE) {
-        pieces = ((U8*)this) + 6;
-    }
-    else {
-        pieces = (U8*)this;
+        pieces = pieces + 6;
     }
 
     for (int i=0; i<6; i++) {
+        //std::cout << "checking " << piece_to_char(this->data.board_0[pieces[i]]) << "\n";
         if (pieces[i] == DEAD) continue;
+        //std::cout << "Getting Moves for " << piece_to_char(this->data.board_0[pieces[i]]) << "\n";
         auto piece_moves = this->get_pseudolegal_moves_for_piece(pieces[i]);
         pseudolegal_moves.insert(piece_moves.begin(), piece_moves.end());
     }
@@ -446,7 +468,7 @@ std::unordered_set<U16> Board::_get_pseudolegal_moves_for_side(U8 color) const {
 Board* Board::copy() const {
 
     Board *b = new Board();
-    memcpy(b, this, sizeof(Board));
+    memcpy(&(b->data), this, sizeof(BoardData));
 
     return b;
 }
@@ -472,15 +494,11 @@ std::unordered_set<U16> Board::get_legal_moves() const {
     for (auto move : pseudolegal_moves) {
         c->_do_move(move);
 
-        // std::cout << "Checking move " << move_to_str(move) << ", curr player is " << c->player_to_play << "\n";
         if (!c->in_check()) {
             legal_moves.insert(move);
         }
-        else {
-            std::cout << move_to_str(move) << " is illegal. Not Adding.\n";
-        }
 
-        c->_undo_move(move);
+        c->_undo_last_move(move);
     }
 
     delete c;
@@ -494,7 +512,7 @@ void Board::do_move(U16 move) {
 }
 
 void Board::_flip_player() {
-    this->player_to_play = (PlayerColor)(this->player_to_play ^ (WHITE | BLACK));
+    this->data.player_to_play = (PlayerColor)(this->data.player_to_play ^ (WHITE | BLACK));
 }
 
 void Board::_do_move(U16 move) {
@@ -503,17 +521,17 @@ void Board::_do_move(U16 move) {
     U8 p1 = getp1(move);
     U8 promo = getpromo(move);
 
-    U8 piecetype = this->board_0[p0];
-    this->last_killed_piece = this->board_0[p1];
-    this->last_killed_piece_idx = -1;
+    U8 piecetype = this->data.board_0[p0];
+    this->data.last_killed_piece = 0;
+    this->data.last_killed_piece_idx = -1;
 
     // scan and get piece from coord
     U8 *pieces = (U8*)this;
     for (int i=0; i<12; i++) {
         if (pieces[i] == p1) {
             pieces[i] = DEAD;
-            // std::cout << "Killed piece " << i << "\n";
-            this->last_killed_piece_idx = i;
+            this->data.last_killed_piece = this->data.board_0[p1];
+            this->data.last_killed_piece_idx = i;
         }
         if (pieces[i] == p0) {
             pieces[i] = p1;
@@ -527,46 +545,46 @@ void Board::_do_move(U16 move) {
         piecetype = (piecetype & (WHITE | BLACK)) | BISHOP;
     }
 
-    this->board_0[p1]           = piecetype;
-    this->board_90[cw_90[p1]]   = piecetype;
-    this->board_180[cw_180[p1]] = piecetype;
-    this->board_270[acw_90[p1]] = piecetype;
+    this->data.board_0[p1]           = piecetype;
+    this->data.board_90[cw_90[p1]]   = piecetype;
+    this->data.board_180[cw_180[p1]] = piecetype;
+    this->data.board_270[acw_90[p1]] = piecetype;
 
-    this->board_0[p0]           = 0;
-    this->board_90[cw_90[p0]]   = 0;
-    this->board_180[cw_180[p0]] = 0;
-    this->board_270[acw_90[p0]] = 0;
+    this->data.board_0[p0]           = 0;
+    this->data.board_90[cw_90[p0]]   = 0;
+    this->data.board_180[cw_180[p0]] = 0;
+    this->data.board_270[acw_90[p0]] = 0;
 
+    // std::cout << "Did last move\n";
+    // std::cout << all_boards_to_str(*this);
 }
 
-void Board::undo_move(U16 move) {
-    _undo_move(move);
+void Board::undo_last_move(U16 move) {
+    _undo_last_move(move);
     _flip_player();
 }
 
-void Board::_undo_move(U16 move) {
+void Board::_undo_last_move(U16 move) {
 
     U8 p0 = getp0(move);
     U8 p1 = getp1(move);
     U8 promo = getpromo(move);
 
-    U8 piecetype = this->board_0[p1];
-    U8 deadpiece = this->last_killed_piece;
-    this->last_killed_piece = 0;
+    U8 piecetype = this->data.board_0[p1];
+    U8 deadpiece = this->data.last_killed_piece;
+    this->data.last_killed_piece = 0;
 
     // scan and get piece from coord
-    U8 *pieces = (U8*)this;
-    if (this->last_killed_piece_idx >= 0) {
-        pieces[this->last_killed_piece_idx] = p1;
-        // std::cout << "Set piece " << this->last_killed_piece_idx << "'s position to " << (int)getx(p1) << "," << (int)gety(p1) << "\n";
-        this->last_killed_piece_idx = -1;
-        // TODO check moves where killing the piece doesn't work
-    }
+    U8 *pieces = (U8*)(&(this->data));
     for (int i=0; i<12; i++) {
         if (pieces[i] == p1) {
             pieces[i] = p0;
             break;
         }
+    }
+    if (this->data.last_killed_piece_idx >= 0) {
+        pieces[this->data.last_killed_piece_idx] = p1;
+        this->data.last_killed_piece_idx = -1;
     }
 
     if (promo == PAWN_ROOK) {
@@ -576,15 +594,16 @@ void Board::_undo_move(U16 move) {
         piecetype = (piecetype & (WHITE | BLACK)) | BISHOP;
     }
 
-    this->board_0[p0]           = piecetype;
-    this->board_90[cw_90[p0]]   = piecetype;
-    this->board_180[cw_180[p0]] = piecetype;
-    this->board_270[acw_90[p0]] = piecetype;
+    this->data.board_0[p0]           = piecetype;
+    this->data.board_90[cw_90[p0]]   = piecetype;
+    this->data.board_180[cw_180[p0]] = piecetype;
+    this->data.board_270[acw_90[p0]] = piecetype;
 
-    this->board_0[p1]           = deadpiece;
-    this->board_90[cw_90[p1]]   = deadpiece;
-    this->board_180[cw_180[p1]] = deadpiece;
-    this->board_270[acw_90[p1]] = deadpiece;
+    this->data.board_0[p1]           = deadpiece;
+    this->data.board_90[cw_90[p1]]   = deadpiece;
+    this->data.board_180[cw_180[p1]] = deadpiece;
+    this->data.board_270[acw_90[p1]] = deadpiece;
 
+    // std::cout << "Undid last move\n";
     // std::cout << all_boards_to_str(*this);
 }
