@@ -1,6 +1,7 @@
 #pragma once
 
 #include "board.hpp"
+#include <atomic>
 
 class Engine {
 
@@ -8,5 +9,5 @@ class Engine {
     std::atomic<U16> best_move;
     std::atomic<bool> search;
 
-    void find_best_move(const Board& b);
+    virtual void find_best_move(const Board& b);
 };

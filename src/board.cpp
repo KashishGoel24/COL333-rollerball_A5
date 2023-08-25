@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include "board.hpp"
+#include <cstring>
 
 constexpr U8 cw_90[64] = {
     48, 40, 32, 24, 16, 8,  0,  7,
