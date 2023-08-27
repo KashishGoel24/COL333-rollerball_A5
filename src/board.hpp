@@ -116,6 +116,7 @@ struct Board {
     private:
     void _flip_player();
     void _do_move(U16 move);
+    bool _under_threat(U8 piece_pos) const;
     void _undo_last_move(U16 move);
     std::unordered_set<U16> _get_pseudolegal_moves_for_side(U8 color) const;
 };

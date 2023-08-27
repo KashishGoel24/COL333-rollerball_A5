@@ -246,8 +246,10 @@ std::unordered_set<U16> construct_bottom_king_moves_with_board(const U8 p0, cons
     std::unordered_set<U16> king_moves;
     if (!(board[pos(getx(p0)-1,0)] & color)) king_moves.insert(move(p0, pos(getx(p0)-1,0)));
     if (!(board[pos(getx(p0)-1,1)] & color)) king_moves.insert(move(p0, pos(getx(p0)-1,1)));
+    if (p0 == 10 && !(board[pos(getx(p0)-1,2)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,2)));
     if (p0 != 6 && !(board[pos(getx(p0)+1,0)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,0)));
     if (p0 != 6 && !(board[pos(getx(p0)+1,1)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,1)));
+    if (p0 == 12 && !(board[pos(getx(p0)+1,2)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,2)));
     if (!(board[pos(getx(p0),gety(p0)^1)] & color)) king_moves.insert(move(p0, pos(getx(p0),gety(p0)^1)));
 
     return king_moves;
@@ -412,23 +414,17 @@ Board::Board(): data{} {
     rotate_board(this->data.board_0, this->data.board_270, acw_90);
 }
 
+
 // Optimization: generate inverse king moves
 // For now, just generate moves of the opposite color and check if any of them
 // attack the king square
-bool Board::in_check() const {
-
-    // std::cout << "Checking if " << player_to_play_to_str(*this) << " is in check\n";
+bool Board::_under_threat(U8 piece_pos) const {
 
     auto pseudolegal_moves = this->_get_pseudolegal_moves_for_side(this->data.player_to_play ^ (WHITE | BLACK));
-    auto king_pos = this->data.w_king;
-    // can make this branchless for kicks but won't add much performance
-    if (this->data.player_to_play == BLACK) {
-        king_pos = this->data.b_king;
-    }
 
     for (auto move : pseudolegal_moves) {
         // std::cout << move_to_str(move) << " ";
-        if (getp1(move) == king_pos) {
+        if (getp1(move) == piece_pos) {
             // std::cout << "<- causes check\n";
             return true;
         }
@@ -436,6 +432,17 @@ bool Board::in_check() const {
     // std::cout << std::endl;
 
     return false;
+}
+
+bool Board::in_check() const {
+
+    auto king_pos = this->data.w_king;
+    // can make this branchless for kicks but won't add much performance
+    if (this->data.player_to_play == BLACK) {
+        king_pos = this->data.b_king;
+    }
+
+    return _under_threat(king_pos);
 }
 
 std::unordered_set<U16> Board::get_pseudolegal_moves() const {

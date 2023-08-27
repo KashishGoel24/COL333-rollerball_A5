@@ -1,5 +1,6 @@
 #include <iostream>
 #include "uciws.hpp"
+#include "board.hpp"
 
 #include <string>
 #include <sstream>
@@ -128,8 +129,31 @@ void UCIWSServer::on_stop() {
     e.search = false;
     U16 move = e.best_move;
     this->game_thread.join();
-    assert(b.get_legal_moves().count(move) > 0);
+
+    // move checking
+    auto legal_moves = b.get_legal_moves();
+
+    assert(legal_moves.size() > 0);
+    assert(legal_moves.count(move) > 0);
     b.do_move(move);
+
+    auto str_move = move_to_str(move);
+    auto opp_moves = b.get_legal_moves();
+    if (b.in_check()) { // opponent is in check because of our move
+        if (opp_moves.size() > 0) {
+            // check
+            str_move += '+';
+        }
+        else {
+            // checkmate
+            str_move += '#';
+        }
+    }
+    else if (opp_moves.size() == 0) {
+        // stalemate
+        str_move += '-';
+    }
+
     server.broadcastMessage("bestmove " + move_to_str(move));
 }
 

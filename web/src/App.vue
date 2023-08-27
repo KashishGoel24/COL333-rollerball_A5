@@ -60,9 +60,28 @@ class Game {
         }
 
         this.move_list = []
+        this.position_list = []
+
+        this.over = false;
     }
 
     start() {
+
+        if (this.over) {
+
+            // restart
+            state.w_conn_btn_text = 'Connect White Bot';
+            state.w_conn_btn_state = 'button-to-connect';
+
+            state.b_conn_btn_text = 'Connect Black Bot';
+            state.b_conn_btn_state = 'button-to-connect';
+
+            state.game_btn_text = 'Start Game';
+            state.game_btn_state = 'button-to-start';
+
+            state.game = new Game();
+            return
+        }
         
         if (this.player_state['white'] === 'uci_initialized' && this.player_state['black'] === 'uci_initialized') {
             this.dispatch_uci_command('white', 'isready');
@@ -93,7 +112,6 @@ class Game {
             this.player_state[player] = 'ready';
 
             if (this.player_state['white'] === 'ready' && this.player_state['black'] === 'ready') {
-                // lesgoooo
                 state.game_btn_state = 'started';
                 state.game_btn_text = 'Game in progress';
                 this.do_move();
@@ -107,9 +125,8 @@ class Game {
                 // do move
                 this.player_state[this.curr_player] = 'ready';
                 var move = tokens[1];
-                this.move_list.push(move);
-                if (move.length > 4) {
-                    // promote - this is harder than it needs to be 
+                if (move.length > 4 && move[4] !== '+') {
+                    // promote - this is harder than it needs to be
                     var curr_pos = this.board.position();
                     delete curr_pos[move.slice(0,2)];
                     curr_pos[move.slice(2,4)] = this.curr_player[0] + move[4].toUpperCase();
@@ -122,7 +139,32 @@ class Game {
                     console.log('Moved ' + textmove);
                 }
                 this.curr_player = this.next_player[player];
-                if (this.player_state[this.curr_player] === 'ready') {
+
+                this.move_list.push(move);
+                this.position_list.push(this.board.fen());
+
+                if (move.endsWith('#')) {
+                    state.left_info = player + " wins by Checkmate!";
+                    this.stop();
+                    return;
+                }
+                else if (move.endsWith('-')) {
+                    // Stalemate
+                    state.left_info = "Game drawn by Stalemate";
+                    this.stop();
+                    return;
+                }
+                else if (this.move_list.length >= 200) {
+                    // threefold repetition
+                    state.left_info = "Game truncated at 100 moves";
+                    this.stop();
+                }
+                else if ((this.position_list.length - [... new Set(this.position_list)].length) >= 2) {
+                    // threefold repetition
+                    state.left_info = "Game drawn by threefold repetition";
+                    this.stop();
+                }
+                else if (this.player_state[this.curr_player] === 'ready') {
                     this.do_move();
                 }
             }
@@ -144,7 +186,16 @@ class Game {
     }
 
     stop() {
+        this.dispatch_uci_command('white', 'quit');
+        this.dispatch_uci_command('black', 'quit');
 
+        state.ws_white.close();
+        state.ws_black.close();
+
+        state.game_btn_state = 'button-to-start';
+        state.game_btn_text = 'Reset';
+
+        this.over = true;
     }
 }
 
@@ -167,7 +218,7 @@ function connect_white() {
     }
 
     state.ws_white.onerror = (err) => {
-        state.left_info = 'Could not connect to white bot';
+        state.right_info = 'Could not connect to white bot';
         state.w_conn_btn_state = 'button-to-connect';
         state.w_conn_btn_text = 'Connect White Bot';
     }
@@ -193,7 +244,7 @@ function connect_black() {
     }
 
     state.ws_black.onerror = (err) => {
-        state.left_info = 'Could not connect to black bot';
+        state.right_info = 'Could not connect to black bot';
         state.b_conn_btn_state = 'button-to-connect';
         state.b_conn_btn_text = 'Connect Black Bot';
     }
