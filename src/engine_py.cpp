@@ -41,7 +41,7 @@ void Engine::find_best_move(const Board& b) {
     std::cout << "Module almost Loaded" << std::endl;
     py::module my_module;
     try{
-        my_module = py::module::import("py_module");
+        my_module = py::module::import("engine");
     }catch(const std::exception& e){
         std::cout << "Error: " << e.what() << std::endl;
     }
