@@ -1,5 +1,5 @@
 print('Start of Python Code')
-from BoardModule import Board
+from board import Board
 import random
 print('Successfull imoprts in pythonn code')
 

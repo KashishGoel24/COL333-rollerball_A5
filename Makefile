@@ -8,16 +8,15 @@ INCLUDES=-Iinclude #-I/opt/homebrew/opt/openssl@1.1/include/
 # PYTHON_INCLUDE_PATH=$(shell python -c "import sysconfig; print(sysconfig.get_path('include'))")
 # LIBRARYPATH=$(shell python -c "import sysconfig; import os;print(os.path.split(os.path.split(sysconfig.get_path('platlib'))[0])[0])")
 # PYTHON_VERSION=$(shell python -c "import sys; print('python' + sys.version[:3])")
-# export LIBRARY_PATH=$(LIBRARYPATH):$LIBRARY_PATH
-
+# export LIBRARY_PATH=$(LIBRARYPATH):$(LD_LIBRARY_PATH)
 
 rollerball:
 	$(CC) $(CFLAGS) $(INCLUDES) src/server.cpp src/board.cpp src/engine.cpp src/rollerball.cpp src/uciws.cpp -o bin/rollerball
+
 rollerball_py:
-	$(CC) $(CFLAGS) $(INCLUDES) -I/opt/homebrew/Caskroom/miniforge/base/envs/rollerball/lib/python3.11/site-packages/pybind11/include `python3 -m pybind11 --includes` src/board.cpp src/bindings.cpp -shared -o BoardModule`python3-config --extension-suffix` -fPIC
-	$(CC) $(CFLAGS) $(INCLUDES) src/server.cpp src/board.cpp src/engine_py.cpp src/rollerball.cpp src/uciws.cpp -o bin/rollerball -I$(PYTHON_INCLUDE_PATH) -l$(PYTHON_VERSION) -fPIC
-lib:
-	$(CC) $(CFLAGS) $(INCLUDES) -shared src/board.cpp -o bin/librollerball.so
+	#$(CC) $(CFLAGS) $(INCLUDES) `python3 -m pybind11 --includes` `python3-config --ldflags` src/board.cpp src/bindings.cpp -shared -o BoardModule`python3-config --extension-suffix` -fPIC
+	pip install -e .
+	$(CC) $(CFLAGS) $(INCLUDES) -Wl,-rpath,/opt/homebrew/Caskroom/miniforge/base/envs/rb_39/lib `python3 -m pybind11 --includes` src/server.cpp src/board.cpp src/engine_py.cpp src/rollerball.cpp src/uciws.cpp -o bin/rollerball_py -I$(PYTHON_INCLUDE_PATH) -l$(PYTHON_VERSION) -fPIC
 
 dbg_frontend: src/debug_frontend.cpp 
 	$(CC) $(CFLAGS) $(INCLUDES) src/server.cpp src/debug_frontend.cpp -o bin/debug_frontend
@@ -27,14 +26,6 @@ dbg_uciws: src/debug_uciws.cpp
 
 dbg_board: src/debug_board.cpp 
 	$(CC) $(CFLAGS) $(INCLUDES) src/board.cpp src/debug_board.cpp -o bin/debug_board
-
-all: server client
-
-server: src/server.cpp
-	$(CC) $(CFLAGS) $(INCLUDES) $< -o bin/server
-
-client: src/client.cpp
-	$(CC) $(CFLAGS) $(INCLUDES) $< -o bin/client
 
 clean:
 	rm bin/*
