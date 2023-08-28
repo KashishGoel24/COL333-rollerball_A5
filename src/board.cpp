@@ -475,7 +475,7 @@ std::unordered_set<U16> Board::_get_pseudolegal_moves_for_side(U8 color) const {
 Board* Board::copy() const {
 
     Board *b = new Board();
-    memcpy(&(b->data), this, sizeof(BoardData));
+    memcpy(&(b->data), &(this->data), sizeof(BoardData));
 
     return b;
 }

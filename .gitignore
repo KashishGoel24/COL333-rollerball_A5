@@ -6,3 +6,6 @@ __pycache__
 .vscode
 scratch
 log.txt
+board.egg-info
+build
+board.cpython*
