@@ -7,7 +7,7 @@ INCLUDES=-Iinclude #-I/opt/homebrew/opt/openssl@1.1/include/
 # Uncomment If throws an error, and not using python3
 PYTHON_INCLUDE_PATH=$(shell python -c "import sysconfig; print(sysconfig.get_path('include'))")
 LIBRARYPATH=$(shell python -c "import sysconfig; import os;print(os.path.split(os.path.split(sysconfig.get_path('platlib'))[0])[0])")
-PYTHON_VERSION=$(shell python -c "import sys; print('python' + sys.version[:3])")
+PYTHON_VERSION=$(shell python -c "import sys; print('python' + '.'.join(sys.version.split('|')[0].strip().split('.')[:2]))")
 # export LIBRARY_PATH=$(LIBRARYPATH):$(LD_LIBRARY_PATH)
 
 
