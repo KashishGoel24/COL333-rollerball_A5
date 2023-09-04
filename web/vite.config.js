@@ -13,6 +13,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
+  build: {
+    rollupOptions: {
+        external: ['jquery-3.5.1.min.js']
+    }
+  },
   define: {
     global: {},
   }

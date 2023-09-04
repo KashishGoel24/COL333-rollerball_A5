@@ -246,10 +246,11 @@ std::unordered_set<U16> construct_bottom_king_moves_with_board(const U8 p0, cons
     std::unordered_set<U16> king_moves;
     if (!(board[pos(getx(p0)-1,0)] & color)) king_moves.insert(move(p0, pos(getx(p0)-1,0)));
     if (!(board[pos(getx(p0)-1,1)] & color)) king_moves.insert(move(p0, pos(getx(p0)-1,1)));
-    if (p0 == 10 && !(board[pos(getx(p0)-1,2)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,2)));
+    if (p0 == 10 && !(board[pos(getx(p0)-1,2)] & color)) king_moves.insert(move(p0, pos(getx(p0)-1,2)));
     if (p0 != 6 && !(board[pos(getx(p0)+1,0)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,0)));
     if (p0 != 6 && !(board[pos(getx(p0)+1,1)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,1)));
-    if (p0 == 12 && !(board[pos(getx(p0)+1,2)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,2)));
+    if (p0 >= 12 && !(board[pos(getx(p0)+1,2)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,2)));
+    if (p0 == 13 && !(board[pos(getx(p0),2)] & color)) king_moves.insert(move(p0, pos(getx(p0),2)));
     if (!(board[pos(getx(p0),gety(p0)^1)] & color)) king_moves.insert(move(p0, pos(getx(p0),gety(p0)^1)));
 
     return king_moves;
@@ -345,7 +346,7 @@ U16 str_to_move(std::string move) {
     return move_promo(pos(x0,y0), pos(x1,y1), promo);
 }
 
-std::unordered_set<U16> Board::get_pseudolegal_moves_for_piece(U8 piece_pos) const {
+std::unordered_set<U16> Board::_get_pseudolegal_moves_for_piece(U8 piece_pos) const {
 
     std::unordered_set<U16> moves;
     U8 piece_id = this->data.board_0[piece_pos];
@@ -445,7 +446,7 @@ bool Board::in_check() const {
     return _under_threat(king_pos);
 }
 
-std::unordered_set<U16> Board::get_pseudolegal_moves() const {
+std::unordered_set<U16> Board::_get_pseudolegal_moves() const {
     return _get_pseudolegal_moves_for_side(this->data.player_to_play);
 }
 
@@ -464,7 +465,7 @@ std::unordered_set<U16> Board::_get_pseudolegal_moves_for_side(U8 color) const {
         //std::cout << "checking " << piece_to_char(this->data.board_0[pieces[i]]) << "\n";
         if (pieces[i] == DEAD) continue;
         //std::cout << "Getting Moves for " << piece_to_char(this->data.board_0[pieces[i]]) << "\n";
-        auto piece_moves = this->get_pseudolegal_moves_for_piece(pieces[i]);
+        auto piece_moves = this->_get_pseudolegal_moves_for_piece(pieces[i]);
         pseudolegal_moves.insert(piece_moves.begin(), piece_moves.end());
     }
 
@@ -495,7 +496,7 @@ Board* Board::copy() const {
 std::unordered_set<U16> Board::get_legal_moves() const {
 
     Board* c = this->copy();
-    auto pseudolegal_moves = get_pseudolegal_moves();
+    auto pseudolegal_moves = c->_get_pseudolegal_moves();
     std::unordered_set<U16> legal_moves;
 
     for (auto move : pseudolegal_moves) {
@@ -564,11 +565,6 @@ void Board::_do_move(U16 move) {
 
     // std::cout << "Did last move\n";
     // std::cout << all_boards_to_str(*this);
-}
-
-void Board::undo_last_move(U16 move) {
-    _undo_last_move(move);
-    _flip_player();
 }
 
 void Board::_undo_last_move(U16 move) {

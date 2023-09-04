@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "chessboardjs-vue3": "^0.0.5",
+    "jquery": "^3.7.1",
     "vue": "^3.3.4"
   },
   "devDependencies": {
