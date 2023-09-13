@@ -15,7 +15,7 @@ const state = reactive({
     game_btn_text: 'Start Game',
 
     left_info: 'rollerball v.1.0',
-    right_info: 'Rev. Aug 24, 2023',
+    right_info: 'Rev. Sep 13, 2023',
 
     ws_white: null,
     ws_black: null,
@@ -159,7 +159,7 @@ class Game {
                     state.left_info = "Game truncated at 100 moves";
                     this.stop();
                 }
-                else if ((this.position_list.length - [... new Set(this.position_list)].length) >= 2) {
+                else if (this.position_list.filter(x => x === this.board.fen()).length >= 3) {
                     // threefold repetition
                     state.left_info = "Game drawn by threefold repetition";
                     this.stop();
