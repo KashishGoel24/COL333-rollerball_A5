@@ -15,7 +15,7 @@ const state = reactive({
     game_btn_text: 'Start Game',
 
     left_info: 'rollerball v.1.0',
-    right_info: 'Rev. Sep 13, 2023',
+    right_info: 'Rev. Sep 19, 2023',
 
     ws_white: null,
     ws_black: null,
@@ -261,11 +261,11 @@ function connect_black() {
 <form>
     <div class='field-pad'>
         <label for="white_address">White Address:</label>
-        <input id="white_address" v-model.number="state.white_address" placeholder="white address">
+        <input id="white_address" v-model="state.white_address" placeholder="white address">
     </div>
     <div class='field-pad'>
         <label for="black_address">Black Address:</label>
-        <input id="black_address" v-model.number="state.black_address" placeholder="black address">
+        <input id="black_address" v-model="state.black_address" placeholder="black address">
     </div>
     <div class='field-pad'>
         <label for="thinking_time">Thinking time:</label>
