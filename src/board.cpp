@@ -87,7 +87,7 @@ std::unordered_set<U16> construct_bottom_rook_moves_with_board(const U8 p0, cons
             }
         }
     }
-    else {
+    if (p0 >= 8) {
         if (!(board[p0-pos(0,1)] & color)) rook_moves.insert(move(p0, p0-pos(0,1))); // bottom
     }
 
