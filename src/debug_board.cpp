@@ -7,7 +7,7 @@
 int main(int argc, char** argv) {
 
     Board *b = new Board();
-    // b->data.player_to_play = BLACK;
+    b->data.player_to_play = BLACK;
 
     while (true) {
         std::cout << board_to_str(b->data.board_0) << std::endl;
