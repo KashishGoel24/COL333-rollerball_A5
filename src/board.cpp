@@ -1,59 +1,13 @@
 #include <string>
 #include <iostream>
 #include "board.hpp"
+#include "constants.hpp"
 #include <cstring>
 
-constexpr U8 cw_90[64] = {
-    48, 40, 32, 24, 16, 8,  0,  7,
-    49, 41, 33, 25, 17, 9,  1,  15,
-    50, 42, 18, 19, 20, 10, 2,  23,
-    51, 43, 26, 27, 28, 11, 3,  31,
-    52, 44, 34, 35, 36, 12, 4,  39,
-    53, 45, 37, 29, 21, 13, 5,  47,
-    54, 46, 38, 30, 22, 14, 6,  55,
-    56, 57, 58, 59, 60, 61, 62, 63
-};
-
-constexpr U8 acw_90[64] = {
-     6, 14, 22, 30, 38, 46, 54, 7,
-     5, 13, 21, 29, 37, 45, 53, 15,
-     4, 12, 18, 19, 20, 44, 52, 23,
-     3, 11, 26, 27, 28, 43, 51, 31,
-     2, 10, 34, 35, 36, 42, 50, 39,
-     1,  9, 17, 25, 33, 41, 49, 47,
-     0,  8, 16, 24, 32, 40, 48, 55,
-    56, 57, 58, 59, 60, 61, 62, 63
-};
-
-constexpr U8 cw_180[64] = {
-    54, 53, 52, 51, 50, 49, 48, 7,
-    46, 45, 44, 43, 42, 41, 40, 15,
-    38, 37, 18, 19, 20, 33, 32, 23,
-    30, 29, 26, 27, 28, 25, 24, 31,
-    22, 21, 34, 35, 36, 17, 16, 39,
-    14, 13, 12, 11, 10,  9,  8, 47,
-     6,  5,  4,  3,  2,  1,  0, 55,
-    56, 57, 58, 59, 60, 61, 62, 63
-};
-
-constexpr U8 id[64] = {
-     0,  1,  2,  3,  4,  5,  6,  7,
-     8,  9, 10, 11, 12, 13, 14, 15,
-    16, 17, 18, 19, 20, 21, 22, 23,
-    24, 25, 26, 27, 28, 29, 30, 31,
-    32, 33, 34, 35, 36, 37, 38, 39,
-    40, 41, 42, 43, 44, 45, 46, 47,
-    48, 49, 50, 51, 52, 53, 54, 55,
-    56, 57, 58, 59, 60, 61, 62, 63
-};
-
-#define cw_90_pos(p) cw_90[p]
-#define cw_180_pos(p) cw_180[p]
-#define acw_90_pos(p) acw_90[p]
-#define cw_90_move(m) move_promo(cw_90[getp0(m)], cw_90[getp1(m)], getpromo(m))
-#define acw_90_move(m) move_promo(acw_90[getp0(m)], acw_90[getp1(m)], getpromo(m))
-#define cw_180_move(p) move_promo(cw_180[getp0(m)], cw_180[getp1(m)], getpromo(m))
 #define color(p) ((PlayerColor)(p & (WHITE | BLACK)))
+#define oppcolor(p) ((PlayerColor)(color(p) ^ (WHITE | BLACK)))
+#define occupied(b, p, c) (b[(p)] & (c))
+#define inboard(b, x, y) (((x) <= 7) && ((x) >= 0) && ((y) <= 7) && ((y) >= 0) && (b[pos((x),(y))] != 1))
 
 std::unordered_set<U16> transform_moves(const std::unordered_set<U16>& moves, const U8 *transform) {
 
@@ -66,6 +20,62 @@ std::unordered_set<U16> transform_moves(const std::unordered_set<U16>& moves, co
     return rot_moves;
 }
 
+std::unordered_set<U16> construct_rook_moves(const U8 p0, const U8 *board, const U8 *bmask) {
+
+    PlayerColor color = color(board[p0]);
+    PlayerColor oppcolor = oppcolor(board[p0]);
+    std::unordered_set<U16> rook_moves;
+
+    // right - move one square 
+    if (inboard(bmask, getx(p0)+1, gety(p0)) && 
+        !occupied(board, p0+pos(1,0), color)) rook_moves.insert(move(p0, p0+pos(1,0)));
+
+    // bottom - move one square 
+    if (inboard(bmask, getx(p0), gety(p0)-1) && 
+        !occupied(board, p0-pos(0,1), color)) rook_moves.insert(move(p0, p0-pos(0,1)));
+
+    // top - move multiple if left end (forward), move one if right end
+    if (inboard(bmask, getx(p0), gety(p0)+1)) {
+        if (bmask[p0+pos(0,1)] == 5 && !occupied(board, p0+pos(0,1), color)) {
+            // right end 
+            rook_moves.insert(move(p0, p0+pos(0,1)));
+        }
+        else {
+            for (int y=1; inboard(bmask, getx(p0), gety(p0)+y); y++) {
+                U8 tgt_pos = p0+pos(0,y);
+                if (occupied(board, tgt_pos, color)) break;
+                
+                rook_moves.insert(move(p0, tgt_pos));
+                if (occupied(board, tgt_pos, oppcolor)) break;
+            }
+        }
+    }
+
+    // left
+    bool blocked = false;
+    for (int x=1; inboard(bmask, getx(p0)-x, gety(p0)); x++) {
+        U8 tgt_pos = p0-pos(x,0);
+        if (occupied(board, tgt_pos, color)) { blocked = true; break; }
+        
+        rook_moves.insert(move(p0, tgt_pos));
+        if (occupied(board, tgt_pos, oppcolor)) { blocked = true; break; }
+    }
+
+    // reflect if on outer ring and not blocked yet
+    if (!blocked && gety(p0) == 0) {
+        for (int y=1; inboard(bmask, 0, y); y++) {
+            U8 tgt_pos = pos(0,y);
+            if (occupied(board, tgt_pos, color)) break;
+            
+            rook_moves.insert(move(p0, tgt_pos));
+            if (occupied(board, tgt_pos, oppcolor)) break;
+        }
+    }
+
+    return rook_moves;
+}
+
+// TODO refactor + generalize
 std::unordered_set<U16> construct_bottom_rook_moves_with_board(const U8 p0, const U8* board) {
 
     int left_rook_reflect[7] = {0, 8, 16, 24, 32, 40, 48};
@@ -367,11 +377,11 @@ std::unordered_set<U16> Board::_get_pseudolegal_moves_for_piece(U8 piece_pos) co
     std::unordered_set<U8> right({ 54, 46, 38, 30, 22, 14, 45, 37, 29, 21 });
 
     const U8 *board = this->data.board_0;
-    const U8 *coord_map = id;
-    const U8 *inv_coord_map = id;
-    if      (left.count(piece_pos))  { board = this->data.board_270;  coord_map = acw_90; inv_coord_map = cw_90;  }
-    else if (top.count(piece_pos))   { board = this->data.board_180; coord_map = cw_180; inv_coord_map = cw_180; }
-    else if (right.count(piece_pos)) { board = this->data.board_90; coord_map = cw_90;  inv_coord_map = acw_90; }
+    const U8 *coord_map = id_7x7;
+    const U8 *inv_coord_map = id_7x7;
+    if      (left.count(piece_pos))  { board = this->data.board_270;  coord_map = acw_90_7x7; inv_coord_map = cw_90_7x7;  }
+    else if (top.count(piece_pos))   { board = this->data.board_180; coord_map = cw_180_7x7; inv_coord_map = cw_180_7x7; }
+    else if (right.count(piece_pos)) { board = this->data.board_90; coord_map = cw_90_7x7;  inv_coord_map = acw_90_7x7; }
 
     if (piece_id & PAWN) {
         if (((piece_pos == 51 || piece_pos == 43) && (piece_id & WHITE)) || 
@@ -420,9 +430,9 @@ Board::Board(): data{} {
     this->data.board_0[this->data.w_pawn_ws]  = WHITE | PAWN;
     this->data.board_0[this->data.w_pawn_bs]  = WHITE | PAWN;
 
-    rotate_board(this->data.board_0, this->data.board_90, cw_90);
-    rotate_board(this->data.board_0, this->data.board_180, cw_180);
-    rotate_board(this->data.board_0, this->data.board_270, acw_90);
+    rotate_board(this->data.board_0, this->data.board_90, cw_90_7x7);
+    rotate_board(this->data.board_0, this->data.board_180, cw_180_7x7);
+    rotate_board(this->data.board_0, this->data.board_270, acw_90_7x7);
 }
 
 
@@ -564,14 +574,14 @@ void Board::_do_move(U16 move) {
     }
 
     this->data.board_0[p1]           = piecetype;
-    this->data.board_90[cw_90[p1]]   = piecetype;
-    this->data.board_180[cw_180[p1]] = piecetype;
-    this->data.board_270[acw_90[p1]] = piecetype;
+    this->data.board_90[cw_90_7x7[p1]]   = piecetype;
+    this->data.board_180[cw_180_7x7[p1]] = piecetype;
+    this->data.board_270[acw_90_7x7[p1]] = piecetype;
 
     this->data.board_0[p0]           = 0;
-    this->data.board_90[cw_90[p0]]   = 0;
-    this->data.board_180[cw_180[p0]] = 0;
-    this->data.board_270[acw_90[p0]] = 0;
+    this->data.board_90[cw_90_7x7[p0]]   = 0;
+    this->data.board_180[cw_180_7x7[p0]] = 0;
+    this->data.board_270[acw_90_7x7[p0]] = 0;
 
     // std::cout << "Did last move\n";
     // std::cout << all_boards_to_str(*this);
@@ -608,14 +618,14 @@ void Board::_undo_last_move(U16 move) {
     }
 
     this->data.board_0[p0]           = piecetype;
-    this->data.board_90[cw_90[p0]]   = piecetype;
-    this->data.board_180[cw_180[p0]] = piecetype;
-    this->data.board_270[acw_90[p0]] = piecetype;
+    this->data.board_90[cw_90_7x7[p0]]   = piecetype;
+    this->data.board_180[cw_180_7x7[p0]] = piecetype;
+    this->data.board_270[acw_90_7x7[p0]] = piecetype;
 
     this->data.board_0[p1]           = deadpiece;
-    this->data.board_90[cw_90[p1]]   = deadpiece;
-    this->data.board_180[cw_180[p1]] = deadpiece;
-    this->data.board_270[acw_90[p1]] = deadpiece;
+    this->data.board_90[cw_90_7x7[p1]]   = deadpiece;
+    this->data.board_180[cw_180_7x7[p1]] = deadpiece;
+    this->data.board_270[acw_90_7x7[p1]] = deadpiece;
 
     // std::cout << "Undid last move\n";
     // std::cout << all_boards_to_str(*this);

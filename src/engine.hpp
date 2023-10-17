@@ -1,13 +1,11 @@
 #pragma once
 
-#include "board.hpp"
+#include "engine_base.hpp"
 #include <atomic>
 
-class Engine {
+class Engine : public AbstractEngine {
 
     public:
-    std::atomic<U16> best_move;
-    std::atomic<bool> search;
 
-    virtual void find_best_move(const Board& b);
+    void find_best_move(const Board& b);
 };

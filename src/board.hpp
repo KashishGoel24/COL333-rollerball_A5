@@ -17,7 +17,7 @@ typedef uint16_t U16;
 #define getpromo(m) ((m)&(PAWN_BISHOP|PAWN_ROOK))
 #define getp1(m)    ((m)&0x3f)
 
-#define DEAD pos(7,7)
+#define DEAD 0xff
 
 enum PlayerColor {
     WHITE=(1<<6),
@@ -36,6 +36,12 @@ enum PieceType {
 enum Promotion {
     PAWN_BISHOP = (1<<6),
     PAWN_ROOK   = (1<<7)
+};
+
+enum BoardType {
+    SEVEN_THREE = 1,
+    EIGHT_FOUR = 2,
+    EIGHT_TWO = 3 
 };
 
 struct BoardData {
@@ -60,6 +66,7 @@ struct BoardData {
     U8 board_180[64];
     U8 board_270[64];
 
+    BoardType board_type = SEVEN_THREE;
     PlayerColor player_to_play = WHITE;
     U8 last_killed_piece = 0;
     int last_killed_piece_idx = -1;
