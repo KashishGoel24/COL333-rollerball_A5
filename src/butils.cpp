@@ -16,32 +16,46 @@ char piece_to_char(U8 piece) {
     return ch;
 }
 
-std::string board_to_str(const U8 *board) {
+std::string board_to_str(const BoardData *b) {
 
-    std::string board_str = ".......\n.......\n..   ..\n..   ..\n..   ..\n.......\n.......\n";
+    std::string board_str = "Could not convert board";
+    if (b->board_type == SEVEN_THREE) {
+        board_str = ".......\n.......\n..   ..\n..   ..\n..   ..\n.......\n.......\n";
 
-    for (int i=0; i<56; i++) {
-        U8 piece = board[i];
-        if (board_str[i] == '\n' || board_str[i] == ' ') continue;
-        board_str[(48-(i/8)*8) + i%8] = piece_to_char(piece);
+        for (int i=0; i<56; i++) {
+            U8 piece = b->board_0[i];
+            if (board_str[i] == '\n' || board_str[i] == ' ') continue;
+            board_str[(48-(i/8)*8) + i%8] = piece_to_char(piece);
+        }
+    }
+    else {
+
+        if (b->board_type == EIGHT_FOUR) {
+            board_str = "........\n........\n..    ..\n..    ..\n..    ..\n..    ..\n........\n........\n";
+        }
+        else {
+            board_str = "........\n........\n........\n...  ...\n...  ...\n........\n........\n........\n";
+        }
+
+        for (int i=0; i<72; i++) {
+            if (board_str[i] == '\n' || board_str[i] == ' ') continue;
+            int idx = i - i/9;
+            U8 piece = b->board_0[idx];
+            board_str[(63-(idx/8)*9) + idx%8] = piece_to_char(piece);
+        }
     }
 
     return board_str;
 }
 
-std::string show_moves(const U8 *board, std::unordered_set<U16>& moves) {
+std::string show_moves(const BoardData *board, std::unordered_set<U16>& moves) {
 
-    std::string board_str = ".......\n.......\n..   ..\n..   ..\n..   ..\n.......\n.......\n";
-
-    for (int i=0; i<56; i++) {
-        U8 piece = board[i];
-        if (board_str[i] == '\n' || board_str[i] == ' ') continue;
-        board_str[(48-(i/8)*8) + i%8] = piece_to_char(piece);
-    }
+    std::string board_str = board_to_str(board);
 
     for (auto m : moves) {
         U8 p1 = getp1(m);
-        board_str[(48-(p1/8)*8) + p1%8] = 'X';
+        if (board->board_type == SEVEN_THREE) board_str[(48-(p1/8)*8) + p1%8] = 'X';
+        else board_str[(63-(p1/8)*9) + p1%8] = 'X';
     }
 
     return board_str;

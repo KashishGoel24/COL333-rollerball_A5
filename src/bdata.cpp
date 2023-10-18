@@ -86,6 +86,8 @@ void BoardData::set_8_2_layout() {
 
 BoardData::BoardData(BoardType btype) {
 
+    this->board_type = btype;
+
     if (btype == SEVEN_THREE) {
         this->set_7_3_layout();
         this->set_7x7_transforms();
