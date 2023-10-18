@@ -43,5 +43,8 @@ dbg_uciws: src/debug_uciws.cpp
 dbg_board: src/debug_board.cpp 
 	$(CC) $(CFLAGS) $(INCLUDES) src/board.cpp src/debug_board.cpp -o bin/debug_board
 
+dbg_moves: src/debug_moves.cpp 
+	$(CC) $(CFLAGS) $(INCLUDES) src/bdata.cpp src/butils.cpp src/board.cpp src/debug_moves.cpp -o bin/dbg_moves
+
 clean:
 	rm bin/*
