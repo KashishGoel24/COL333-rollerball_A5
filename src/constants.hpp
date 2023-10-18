@@ -1,6 +1,21 @@
 #pragma once
 
-#include "board.hpp"
+#include <string>
+
+typedef uint8_t U8;
+typedef uint16_t U16;
+
+#define pos(x,y) (((y)<<3)|(x))
+#define gety(p)  ((p)>>3)
+#define getx(p)  ((p)&0x7)
+
+#define move(p0, p1) (((p0)<<8)|(p1))
+#define move_promo(p0, p1, pt) (((p0)<<8)|(p1)|(pt))
+#define getp0(m)    (((m)>>8)&0x3f)
+#define getpromo(m) ((m)&(PAWN_BISHOP|PAWN_ROOK))
+#define getp1(m)    ((m)&0x3f)
+
+#define DEAD 0xff
 
 constexpr U8 cw_90_7x7[64] = {
     48, 40, 32, 24, 16, 8,  0,  7,
@@ -122,3 +137,39 @@ constexpr U8 board_8_4[64] = {
     5, 4, 4, 4, 4, 4, 3, 3,
     4, 4, 4, 4, 4, 4, 4, 3
 };
+
+// Let's not do this now. Loading / storing from a string config will become too 
+// complex
+// const char* board_7_3_startconfig = R"BOARD(
+//         
+// ..rbp.. 
+// ..rkp.. 
+// ..   .. 
+// ..   .. 
+// ..   .. 
+// ..PKR.. 
+// ..PBR.. 
+// )BOARD";
+// 
+// const char* board_8_4_startconfig = R"BOARD(
+// ..rnbp..        
+// ..rnkp..
+// ..    ..
+// ..    ..
+// ..    ..
+// ..    ..
+// ..PKNR..
+// ..PBNR..
+// )BOARD";
+// 
+// // TODO
+// const char* board_8_2_startconfig = R"BOARD(
+// ........        
+// ........
+// ........
+// ...  ...
+// ...  ...
+// ........
+// ........
+// ........
+// )BOARD";

@@ -75,6 +75,83 @@ std::unordered_set<U16> construct_rook_moves(const U8 p0, const U8 *board, const
     return rook_moves;
 }
 
+std::unordered_set<U16> construct_bishop_moves(const U8 p0, const U8 *board, const U8 *bmask) {
+
+    PlayerColor color = color(board[p0]);
+    PlayerColor oppcolor = oppcolor(board[p0]);
+    std::unordered_set<U16> bishop_moves;
+
+    // top right - move one square 
+    if (inboard(bmask, getx(p0)+1, gety(p0)+1) && 
+        !occupied(board, p0+pos(1,1), color)) bishop_moves.insert(move(p0, p0+pos(1,1)));
+
+    // bottom right - move one square 
+    if (inboard(bmask, getx(p0)+1, gety(p0)-1) && 
+        !occupied(board, p0+pos(1,0)-pos(0,1), color)) 
+        bishop_moves.insert(move(p0, p0+pos(1,0)-pos(0,1)));
+
+    // top left - move till reflection, then reflect
+    bool blocked = false;
+    U8 tgt_pos = DEAD;
+    for (int s=1; inboard(bmask, getx(p0)-s, gety(p0)+s); s++) {
+        U8 tgt_pos = p0-pos(s,0)+pos(0,s);
+        if (occupied(board, tgt_pos, color)) { blocked = true; break; }
+        
+        bishop_moves.insert(move(p0, tgt_pos));
+        if (occupied(board, tgt_pos, oppcolor)) { blocked = true; break; }
+    }
+
+    // reflect on left / top edge
+    if (!blocked) {
+        U8 p1 = tgt_pos;
+        if (getx(tgt_pos) == 0) {
+            // left edge 
+            for (int s=1; inboard(bmask, getx(p1)+s, gety(p1)+s); s++) {
+                U8 tgt_pos = p1+pos(s,s);
+                if (occupied(board, tgt_pos, color)) { blocked = true; break; }
+                
+                bishop_moves.insert(move(p0, tgt_pos));
+                if (occupied(board, tgt_pos, oppcolor)) { blocked = true; break; }
+            }
+        }
+        else {
+            // top edge
+            for (int s=1; inboard(bmask, getx(p1)-s, gety(p1)-s); s++) {
+                U8 tgt_pos = p1-pos(s,s);
+                if (occupied(board, tgt_pos, color)) { blocked = true; break; }
+                
+                bishop_moves.insert(move(p0, tgt_pos));
+                if (occupied(board, tgt_pos, oppcolor)) { blocked = true; break; }
+            }
+        }
+    }
+
+    // bottom left - move till reflection, then reflect
+    blocked = false;
+    tgt_pos = DEAD;
+    for (int s=1; inboard(bmask, getx(p0)-s, gety(p0)-s); s++) {
+        U8 tgt_pos = p0-pos(s,s);
+        if (occupied(board, tgt_pos, color)) { blocked = true; break; }
+        
+        bishop_moves.insert(move(p0, tgt_pos));
+        if (occupied(board, tgt_pos, oppcolor)) { blocked = true; break; }
+    }
+
+    // reflect on bottom edge
+    if (!blocked) {
+        U8 p1 = tgt_pos;
+        for (int s=1; inboard(bmask, getx(p1)-s, gety(p1)+s); s++) {
+            U8 tgt_pos = p1-pos(s,0)+pos(0,s);
+            if (occupied(board, tgt_pos, color)) { blocked = true; break; }
+            
+            bishop_moves.insert(move(p0, tgt_pos));
+            if (occupied(board, tgt_pos, oppcolor)) { blocked = true; break; }
+        }
+    }
+
+    return bishop_moves;
+}
+
 // TODO refactor + generalize
 std::unordered_set<U16> construct_bottom_rook_moves_with_board(const U8 p0, const U8* board) {
 
@@ -229,49 +306,49 @@ std::unordered_set<U16> construct_bottom_bishop_moves_with_board(const U8 p0, co
     return bishop_moves;
 }
 
-std::unordered_set<U16> construct_bottom_pawn_moves_with_board(const U8 p0, const U8 *board, bool promote = false) {
+bool can_promote(U8 pos, U8 *promo, int n_promo, bool promote) {
+    for (int i=0; i<n_promo; i++) {
+        if (promo[i] == pos) return true;
+    }
+    return false;
+}
+
+std::unordered_set<U16> construct_pawn_moves(const U8 p0, const U8 *board, const U8 *bmask,
+        U8 *promo, int n_promo, bool promote) {
     
     PlayerColor color = color(board[p0]);
     std::unordered_set<U16> pawn_moves;
 
-    if (!(board[pos(getx(p0)-1,0)] & color)) {
-        if (promote) {
-            pawn_moves.insert(move_promo(p0, pos(getx(p0)-1,0), PAWN_ROOK));
-            pawn_moves.insert(move_promo(p0, pos(getx(p0)-1,0), PAWN_BISHOP));
-        }
-        else {
-            pawn_moves.insert(move(p0, pos(getx(p0)-1,0)));
-        }
-    }
-    if (!(board[pos(getx(p0)-1,1)] & color)) {
-        if (promote) {
-            pawn_moves.insert(move_promo(p0, pos(getx(p0)-1,1), PAWN_ROOK));
-            pawn_moves.insert(move_promo(p0, pos(getx(p0)-1,1), PAWN_BISHOP));
-        }
-        else {
-            pawn_moves.insert(move(p0, pos(getx(p0)-1,1)));
+    for (int y = gety(p0)-1; y <= gety(p0) + 1; y++) {
+        if (!inboard(bmask, getx(p0)-1, y)) continue;
+        U8 p1 = pos(getx(p0)-1, y);
+        if (!occupied(board, p1, color)) {
+            if (can_promote(p1, promo, n_promo, promote)) {
+                pawn_moves.insert(move_promo(p0, p1, PAWN_ROOK));
+                pawn_moves.insert(move_promo(p0, p1, PAWN_BISHOP));
+            }
+            else {
+                pawn_moves.insert(move(p0, p1));
+            }
         }
     }
-    if (p0 == 10 && !(board[17] & color)) pawn_moves.insert(move(p0, 17));
 
     return pawn_moves;
 }
 
-std::unordered_set<U16> construct_bottom_king_moves_with_board(const U8 p0, const U8 *board) {
+std::unordered_set<U16> construct_king_moves(const U8 p0, const U8 *board, const U8 *bmask) {
 
-    // king can't move into check. See if these squares are under threat from 
-    // enemy pieces as well.
-    
     PlayerColor color = color(board[p0]);
     std::unordered_set<U16> king_moves;
-    if (!(board[pos(getx(p0)-1,0)] & color)) king_moves.insert(move(p0, pos(getx(p0)-1,0)));
-    if (!(board[pos(getx(p0)-1,1)] & color)) king_moves.insert(move(p0, pos(getx(p0)-1,1)));
-    if (p0 == 10 && !(board[pos(getx(p0)-1,2)] & color)) king_moves.insert(move(p0, pos(getx(p0)-1,2)));
-    if (p0 != 6 && !(board[pos(getx(p0)+1,0)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,0)));
-    if (p0 != 6 && !(board[pos(getx(p0)+1,1)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,1)));
-    if (p0 >= 12 && !(board[pos(getx(p0)+1,2)] & color)) king_moves.insert(move(p0, pos(getx(p0)+1,2)));
-    if (p0 == 13 && !(board[pos(getx(p0),2)] & color)) king_moves.insert(move(p0, pos(getx(p0),2)));
-    if (!(board[pos(getx(p0),gety(p0)^1)] & color)) king_moves.insert(move(p0, pos(getx(p0),gety(p0)^1)));
+
+    int x_incrs[8] = {1, 1,  1, 0,  0, -1, -1, -1};
+    int y_incrs[8] = {1, 0, -1, 1, -1,  1,  0, -1};
+
+    for (int i=0; i<8; i++) {
+        if (!inboard(bmask, getx(p0)+x_incrs[i], gety(p0)+y_incrs[i])) continue;
+        U8 p1 = pos(getx(p0)+x_incrs[i], gety(p0)+y_incrs[i]);
+        if (!occupied(board, p1, color)) king_moves.insert(move(p0, p1));
+    }
 
     return king_moves;
 }
@@ -369,40 +446,28 @@ U16 str_to_move(std::string move) {
 std::unordered_set<U16> Board::_get_pseudolegal_moves_for_piece(U8 piece_pos) const {
 
     std::unordered_set<U16> moves;
-    U8 piece_id = this->data.board_0[piece_pos];
-
-    std::unordered_set<U8> bottom({ 1, 2, 3, 4, 5, 6, 10, 11, 12, 13 });
-    std::unordered_set<U8> left({ 0, 8, 16, 24, 32, 40, 9, 17, 25, 33 });
-    std::unordered_set<U8> top({ 48, 49, 50, 51, 52, 53, 41, 42, 43, 44 });
-    std::unordered_set<U8> right({ 54, 46, 38, 30, 22, 14, 45, 37, 29, 21 });
-
-    const U8 *board = this->data.board_0;
-    const U8 *coord_map = id_7x7;
-    const U8 *inv_coord_map = id_7x7;
-    if      (left.count(piece_pos))  { board = this->data.board_270;  coord_map = acw_90_7x7; inv_coord_map = cw_90_7x7;  }
-    else if (top.count(piece_pos))   { board = this->data.board_180; coord_map = cw_180_7x7; inv_coord_map = cw_180_7x7; }
-    else if (right.count(piece_pos)) { board = this->data.board_90; coord_map = cw_90_7x7;  inv_coord_map = acw_90_7x7; }
+    U8 piece_id = this->data.board[0][piece_pos];
+    int board_idx = data.board_mask[piece_pos] - 2;
+    const U8 *transform_arr = this->data.transform_array[board_idx];
+    const U8 *inv_transform_arr = this->data.inverse_transform_array[board_idx];
+    const U8 *board = this->data.board[board_idx];
 
     if (piece_id & PAWN) {
-        if (((piece_pos == 51 || piece_pos == 43) && (piece_id & WHITE)) || 
-            ((piece_pos == 11 || piece_pos == 3)  && (piece_id & BLACK)) ) {
-            moves = construct_bottom_pawn_moves_with_board(coord_map[piece_pos], board, true);
-        }
-        else {
-            moves = construct_bottom_pawn_moves_with_board(coord_map[piece_pos], board);
-        }
+        moves = construct_pawn_moves(transform_arr[piece_pos], board, this->data.board_mask,
+                (U8*)this->data.pawn_promo_squares, this->data.n_pawn_promo_squares,
+                (board_idx==2 && (piece_id & WHITE)) || (board_idx==0 && (piece_id & BLACK)));
     }
     else if (piece_id & ROOK) {
-        moves = construct_bottom_rook_moves_with_board(coord_map[piece_pos], board);
+        moves = construct_rook_moves(transform_arr[piece_pos], board, this->data.board_mask);
     }
     else if (piece_id & BISHOP) {
-        moves = construct_bottom_bishop_moves_with_board(coord_map[piece_pos], board);
+        moves = construct_bishop_moves(transform_arr[piece_pos], board, this->data.board_mask);
     }
     else if (piece_id & KING) {
-        moves = construct_bottom_king_moves_with_board(coord_map[piece_pos], board);
+        moves = construct_king_moves(transform_arr[piece_pos], board, this->data.board_mask);
     }
 
-    moves = transform_moves(moves, inv_coord_map);
+    moves = transform_moves(moves, inv_transform_arr);
 
     return moves;
 }
@@ -414,25 +479,100 @@ void rotate_board(U8 *src, U8 *tgt, const U8 *transform) {
     }
 }
 
-Board::Board(): data{} {
+Board::Board(): data{SEVEN_THREE} {}
 
-    this->data.board_0[this->data.b_rook_ws]  = BLACK | ROOK;
-    this->data.board_0[this->data.b_rook_bs]  = BLACK | ROOK;
-    this->data.board_0[this->data.b_king   ]  = BLACK | KING;
-    this->data.board_0[this->data.b_bishop ]  = BLACK | BISHOP;
-    this->data.board_0[this->data.b_pawn_ws]  = BLACK | PAWN;
-    this->data.board_0[this->data.b_pawn_bs]  = BLACK | PAWN;
+BoardData::BoardData(BoardType btype) {
 
-    this->data.board_0[this->data.w_rook_ws]  = WHITE | ROOK;
-    this->data.board_0[this->data.w_rook_bs]  = WHITE | ROOK;
-    this->data.board_0[this->data.w_king   ]  = WHITE | KING;
-    this->data.board_0[this->data.w_bishop ]  = WHITE | BISHOP;
-    this->data.board_0[this->data.w_pawn_ws]  = WHITE | PAWN;
-    this->data.board_0[this->data.w_pawn_bs]  = WHITE | PAWN;
+    if (btype == SEVEN_THREE) {
+        this->b_rook_ws = pos(2,5);
+        this->b_rook_bs = pos(2,6);
+        this->b_king    = pos(3,5);
+        this->b_bishop  = pos(3,6);
+        this->b_pawn_ws = pos(4,5);
+        this->b_pawn_bs = pos(4,6);
 
-    rotate_board(this->data.board_0, this->data.board_90, cw_90_7x7);
-    rotate_board(this->data.board_0, this->data.board_180, cw_180_7x7);
-    rotate_board(this->data.board_0, this->data.board_270, acw_90_7x7);
+        this->w_rook_ws = pos(4,1);
+        this->w_rook_bs = pos(4,0);
+        this->w_king    = pos(3,1);
+        this->w_bishop  = pos(3,0);
+        this->w_pawn_ws = pos(2,1);
+        this->w_pawn_bs = pos(2,0);
+
+        this->board_mask = (U8*)board_7_3;
+        this->transform_array[0] = (U8*)id_7x7;
+        this->transform_array[1] = (U8*)cw_90_7x7;
+        this->transform_array[2] = (U8*)cw_180_7x7;
+        this->transform_array[3] = (U8*)acw_90_7x7;
+        this->inverse_transform_array[0] = (U8*)id_7x7;
+        this->inverse_transform_array[1] = (U8*)acw_90_7x7;
+        this->inverse_transform_array[2] = (U8*)cw_180_7x7;
+        this->inverse_transform_array[3] = (U8*)cw_90_7x7;
+    }
+    else {
+        this->transform_array[0] = (U8*)id_8x8;
+        this->transform_array[1] = (U8*)cw_90_8x8;
+        this->transform_array[2] = (U8*)cw_180_8x8;
+        this->transform_array[3] = (U8*)acw_90_8x8;
+        this->inverse_transform_array[0] = (U8*)id_8x8;
+        this->inverse_transform_array[1] = (U8*)acw_90_8x8;
+        this->inverse_transform_array[2] = (U8*)cw_180_8x8;
+        this->inverse_transform_array[3] = (U8*)cw_90_8x8;
+
+        if (btype == EIGHT_FOUR) {
+            // TODO change layout
+            this->b_rook_ws = pos(2,5);
+            this->b_rook_bs = pos(2,6);
+            this->b_king    = pos(3,5);
+            this->b_bishop  = pos(3,6);
+            this->b_pawn_ws = pos(4,5);
+            this->b_pawn_bs = pos(4,6);
+
+            this->w_rook_ws = pos(4,1);
+            this->w_rook_bs = pos(4,0);
+            this->w_king    = pos(3,1);
+            this->w_bishop  = pos(3,0);
+            this->w_pawn_ws = pos(2,1);
+            this->w_pawn_bs = pos(2,0);
+
+            this->board_mask = (U8*)board_7_3;
+        }
+        else {
+            // TODO change layout
+            this->b_rook_ws = pos(2,5);
+            this->b_rook_bs = pos(2,6);
+            this->b_king    = pos(3,5);
+            this->b_bishop  = pos(3,6);
+            this->b_pawn_ws = pos(4,5);
+            this->b_pawn_bs = pos(4,6);
+
+            this->w_rook_ws = pos(4,1);
+            this->w_rook_bs = pos(4,0);
+            this->w_king    = pos(3,1);
+            this->w_bishop  = pos(3,0);
+            this->w_pawn_ws = pos(2,1);
+            this->w_pawn_bs = pos(2,0);
+
+            this->board_mask = (U8*)board_7_3;
+        }
+    }
+
+    this->board_0[this->b_rook_ws]  = BLACK | ROOK;
+    this->board_0[this->b_rook_bs]  = BLACK | ROOK;
+    this->board_0[this->b_king   ]  = BLACK | KING;
+    this->board_0[this->b_bishop ]  = BLACK | BISHOP;
+    this->board_0[this->b_pawn_ws]  = BLACK | PAWN;
+    this->board_0[this->b_pawn_bs]  = BLACK | PAWN;
+
+    this->board_0[this->w_rook_ws]  = WHITE | ROOK;
+    this->board_0[this->w_rook_bs]  = WHITE | ROOK;
+    this->board_0[this->w_king   ]  = WHITE | KING;
+    this->board_0[this->w_bishop ]  = WHITE | BISHOP;
+    this->board_0[this->w_pawn_ws]  = WHITE | PAWN;
+    this->board_0[this->w_pawn_bs]  = WHITE | PAWN;
+
+    rotate_board(this->board_0, this->board_90, this->transform_array[1]);
+    rotate_board(this->board_0, this->board_180, this->transform_array[2]);
+    rotate_board(this->board_0, this->board_270, this->transform_array[3]);
 }
 
 

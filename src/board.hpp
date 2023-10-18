@@ -3,21 +3,7 @@
 #include <vector>
 #include <unordered_set>
 #include <stack>
-
-typedef uint8_t U8;
-typedef uint16_t U16;
-
-#define pos(x,y) (((y)<<3)|(x))
-#define gety(p)  ((p)>>3)
-#define getx(p)  ((p)&0x7)
-
-#define move(p0, p1) (((p0)<<8)|(p1))
-#define move_promo(p0, p1, pt) (((p0)<<8)|(p1)|(pt))
-#define getp0(m)    (((m)>>8)&0x3f)
-#define getpromo(m) ((m)&(PAWN_BISHOP|PAWN_ROOK))
-#define getp1(m)    ((m)&0x3f)
-
-#define DEAD 0xff
+#include "constants.hpp"
 
 enum PlayerColor {
     WHITE=(1<<6),
@@ -60,6 +46,9 @@ struct BoardData {
     U8 w_bishop   = pos(3,0);
     U8 w_pawn_ws  = pos(2,1);
     U8 w_pawn_bs  = pos(2,0);
+
+    U8 *black_pieces[6] = {&b_rook_ws, &b_rook_bs, &b_king, &b_bishop, &b_pawn_ws, &b_pawn_bs};
+    U8 *white_pieces[6] = {&w_rook_ws, &w_rook_bs, &w_king, &w_bishop, &w_pawn_ws, &w_pawn_bs};
     
     U8 board_0[64];
     U8 board_90[64];
@@ -67,9 +56,19 @@ struct BoardData {
     U8 board_270[64];
 
     BoardType board_type = SEVEN_THREE;
+    U8 *board_mask;
     PlayerColor player_to_play = WHITE;
     U8 last_killed_piece = 0;
     int last_killed_piece_idx = -1;
+
+    U8 *board[4] = {board_0, board_90, board_180, board_270};
+    U8 *transform_array[4];
+    U8 *inverse_transform_array[4];
+
+    U8 pawn_promo_squares[10];
+    int n_pawn_promo_squares;
+
+    BoardData(BoardType board_type);
 
 };
 
