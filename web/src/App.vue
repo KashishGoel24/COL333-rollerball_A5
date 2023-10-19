@@ -14,13 +14,17 @@ const state = reactive({
     game_btn_state: 'button-to-start',
     game_btn_text: 'Start Game',
 
+    board_class: 'board-7-3',
+    board_enclose_class: 'board-enclose-7-3',
+
     left_info: 'rollerball v.1.0',
     right_info: 'Rev. Sep 19, 2023',
 
     ws_white: null,
     ws_black: null,
 
-    game: null
+    game: null,
+    in_progress: false
 })
 
 class Game {
@@ -42,10 +46,6 @@ class Game {
                 d7: 'bB',
                 e6: 'bP',
                 e7: 'bP'
-
-                // f1: 'bR',
-                // e1: 'bP',
-                // d1: 'wK'
             }
         })
 
@@ -84,8 +84,8 @@ class Game {
         }
         
         if (this.player_state['white'] === 'uci_initialized' && this.player_state['black'] === 'uci_initialized') {
-            this.dispatch_uci_command('white', 'isready');
-            this.dispatch_uci_command('black', 'isready');
+            this.dispatch_uci_command('white', `ucinewgame ${state.board_class} 40000`);
+            this.dispatch_uci_command('black', `ucinewgame ${state.board_class} 40000`);
         }
         else {
             state.left_info = 'Could not start game: one or more UCI engines not initialized';
@@ -96,9 +96,9 @@ class Game {
     do_move() {
         var player = this.curr_player;
         this.dispatch_uci_command(player, 'position startpos moves ' + this.move_list.join(' ')); 
-        this.dispatch_uci_command(player, 'go'); 
+        this.dispatch_uci_command(player, 'go 40000'); 
         this.player_state[player] = 'thinking';
-        setTimeout(() => {this.dispatch_uci_command(player, 'stop')}, state.thinking_time*1000);
+        // setTimeout(() => {this.dispatch_uci_command(player, 'stop')}, state.thinking_time*1000);
     }
 
     process_uci_command(player, command) {
@@ -108,7 +108,7 @@ class Game {
         if (tokens[0] === 'uciok') {
             this.player_state[player] = 'uci_initialized';
         }
-        else if (tokens[0] === 'readyok') {
+        else if (tokens[0] === 'newgameok') {
             this.player_state[player] = 'ready';
 
             if (this.player_state['white'] === 'ready' && this.player_state['black'] === 'ready') {
@@ -254,6 +254,21 @@ function connect_black() {
     }
 }
 
+function set_7_3_board() {
+    state.board_class = 'board-7-3';
+    state.board_enclose_class = 'board-enclose-7-3';
+}
+
+function set_8_4_board() {
+    state.board_class = 'board-8-4';
+    state.board_enclose_class = 'board-enclose-8-4';
+}
+
+function set_8_2_board() {
+    state.board_class = 'board-8-2';
+    state.board_enclose_class = 'board-enclose-8-2';
+}
+
 </script>
 
 <template>
@@ -268,7 +283,7 @@ function connect_black() {
         <input id="black_address" v-model="state.black_address" placeholder="black address">
     </div>
     <div class='field-pad'>
-        <label for="thinking_time">Thinking time:</label>
+        <label for="thinking_time">Time per side:</label>
         <input type="number" id="thinking_time" v-model.number="state.thinking_time" placeholder="thinking time">
     </div>
 </form>
@@ -278,8 +293,14 @@ function connect_black() {
     <div class='button-enclose'><button :class='state.game_btn_state' @click="state.game.start" v-html="state.game_btn_text"></button></div>
 </div>
 
-<div class='board-enclose'>
-<div id="myBoard" style="width: 400px"></div>
+<div :class='state.board_enclose_class'>
+<div id="myBoard" :class="state.board_class" style="width: 400px"></div>
+</div>
+
+<div class='button-bar'>
+    <div class='button-enclose'><button :disabled='state.in_progress' @click="set_7_3_board">7_3 board</button></div>
+    <div class='button-enclose'><button :disabled='state.in_progress' @click="set_8_4_board">8_4 board</button></div>
+    <div class='button-enclose'><button :disabled='state.in_progress' @click="set_8_2_board">8_2 board</button></div>
 </div>
 
 <div class='info-bar'>
@@ -389,13 +410,27 @@ input {
   -moz-appearance: textfield;
 }
 
-div.board-enclose {
+div.board-enclose-7-3 {
 
   padding-left: 50px;
   padding-bottom: 20px;
 }
 
-#myBoard {
+div.board-enclose-8-4 {
+
+  padding-left: 0px;
+  padding-bottom: 20px;
+  padding-top: 20px;
+}
+
+div.board-enclose-8-2 {
+
+  padding-left: 0px;
+  padding-bottom: 20px;
+  padding-top: 20px;
+}
+
+.board-7-3 {
   clip-path: polygon(
       0px 65px, 
       15px 50px, 
@@ -409,6 +444,44 @@ div.board-enclose {
       350px 65px, 
       350px 385px, 
       335px 400px, 
+      15px 400px, 
+      0px 385px
+  );
+}
+
+.board-8-4 {
+  clip-path: polygon(
+      0px 15px, 
+      15px 0px, 
+      100px 0px, /* */
+      100px 300px,
+      300px 300px,
+      300px 100px,
+      100px 100px,
+      100px 0px, /* */
+      385px 0px, 
+      400px 15px, 
+      400px 385px, 
+      385px 400px, 
+      15px 400px, 
+      0px 385px
+  );
+}
+
+.board-8-2 {
+  clip-path: polygon(
+      0px 15px, 
+      15px 0px, 
+      150px 0px, /* */
+      150px 250px,
+      250px 250px,
+      250px 150px,
+      150px 150px,
+      100px 0px, /* */
+      385px 0px, 
+      400px 15px, 
+      400px 385px, 
+      385px 400px, 
       15px 400px, 
       0px 385px
   );

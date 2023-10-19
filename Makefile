@@ -3,9 +3,11 @@ CFLAGS=-Wall -std=c++17 -O3 -funroll-loops -DASIO_STANDALONE
 
 INCLUDES=-Iinclude
 
+SRC=src/server.cpp src/board.cpp src/butils.cpp src/bdata.cpp src/engine.cpp src/uciws.cpp src/rollerball.cpp
+
 rollerball:
 	mkdir -p bin
-	$(CC) $(CFLAGS) $(INCLUDES) src/server.cpp src/board.cpp src/engine.cpp src/rollerball.cpp src/uciws.cpp -lpthread -o bin/rollerball
+	$(CC) $(CFLAGS) $(INCLUDES) $(SRC) -lpthread -o bin/rollerball
 
 package:
 	mkdir -p build

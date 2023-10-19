@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include "board.hpp"
+#include "butils.hpp"
 #include "constants.hpp"
 #include <cstring>
 
@@ -14,6 +15,18 @@ char piece_to_char(U8 piece) {
     if (piece & WHITE) ch = ch - ('a'-'A');
 
     return ch;
+}
+
+std::string board_7_3_to_str(const U8 *b) {
+    std::string board_str = ".......\n.......\n..   ..\n..   ..\n..   ..\n.......\n.......\n";
+
+    for (int i=0; i<56; i++) {
+        U8 piece = b[i];
+        if (board_str[i] == '\n' || board_str[i] == ' ') continue;
+        board_str[(48-(i/8)*8) + i%8] = piece_to_char(piece);
+    }
+
+    return board_str;
 }
 
 std::string board_to_str(const BoardData *b) {

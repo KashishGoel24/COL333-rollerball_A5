@@ -34,17 +34,6 @@ enum BoardType {
 struct BoardData {
 
     // DO NOT add any fields above this
-    U8 b_rook_1   = DEAD;
-    U8 b_rook_2   = DEAD;
-    U8 b_king     = DEAD;
-    U8 b_bishop   = DEAD;
-    U8 b_knight_1 = DEAD;
-    U8 b_knight_2 = DEAD;
-    U8 b_pawn_1   = DEAD;
-    U8 b_pawn_2   = DEAD;
-    U8 b_pawn_3   = DEAD;
-    U8 b_pawn_4   = DEAD;
-
     U8 w_rook_1   = DEAD;
     U8 w_rook_2   = DEAD;
     U8 w_king     = DEAD;
@@ -56,14 +45,18 @@ struct BoardData {
     U8 w_pawn_3   = DEAD;
     U8 w_pawn_4   = DEAD;
 
+    U8 b_rook_1   = DEAD;
+    U8 b_rook_2   = DEAD;
+    U8 b_king     = DEAD;
+    U8 b_bishop   = DEAD;
+    U8 b_knight_1 = DEAD;
+    U8 b_knight_2 = DEAD;
+    U8 b_pawn_1   = DEAD;
+    U8 b_pawn_2   = DEAD;
+    U8 b_pawn_3   = DEAD;
+    U8 b_pawn_4   = DEAD;
+
     static const int n_pieces = 10;
-    U8 *pieces[n_pieces * 2] = {
-        &w_rook_1, &w_rook_2, &w_king, &w_bishop, &w_knight_1, 
-        &w_knight_2, &w_pawn_1, &w_pawn_2, &w_pawn_3, &w_pawn_4,
-        &b_rook_1, &b_rook_2, &b_king, &b_bishop, &b_knight_1, 
-        &b_knight_2, &b_pawn_1, &b_pawn_2, &b_pawn_3, &b_pawn_4
-    };
-    
     U8 board_0[64];
     U8 board_90[64];
     U8 board_180[64];
@@ -75,15 +68,15 @@ struct BoardData {
     U8 last_killed_piece = 0;
     int last_killed_piece_idx = -1;
 
-    U8 *board[4] = {board_0, board_90, board_180, board_270};
     U8 *transform_array[4];
     U8 *inverse_transform_array[4];
 
     U8 pawn_promo_squares[10];
     int n_pawn_promo_squares;
 
-    BoardData(BoardType board_type);
     BoardData();
+    BoardData(BoardType board_type);
+    BoardData(const BoardData& source);
 
     void set_pieces_on_board();
     void set_8_4_layout();

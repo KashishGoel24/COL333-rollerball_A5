@@ -23,8 +23,8 @@ class UCIWSServer {
     uint32_t port;
     std::string name;
 
-    Board b;
-    Engine e;
+    Board *b;
+    Engine *e;
 
     UCIWSServer(std::string name, uint32_t port);
 
@@ -35,9 +35,8 @@ class UCIWSServer {
 
     void on_uci();
     void on_isready();
-    void on_ucinewgame();
+    void on_ucinewgame(std::vector<std::string>& toks);
     void on_position(std::vector<std::string>& toks);
     void on_go(std::vector<std::string>& toks);
-    void on_stop();
     void on_quit();
 };

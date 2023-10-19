@@ -1,9 +1,11 @@
 #include <iostream>
 #include "uciws.hpp"
 #include "board.hpp"
+#include "butils.hpp"
 
 #include <string>
 #include <sstream>
+#include <unistd.h>
 #include <thread>
 #include <vector>
 #include <iterator>
@@ -35,20 +37,14 @@ void UCIWSServer::handle_message(ClientConnection conn, const std::string& messa
     if (toks[0] == "uci") {
         on_uci();
     }
-    else if (toks[0] == "isready") {
-        on_isready();
-    }
     else if (toks[0] == "ucinewgame") {
-        on_ucinewgame();
+        on_ucinewgame(toks);
     }
     else if (toks[0] == "position") {
         on_position(toks);
     }
     else if (toks[0] == "go") {
         on_go(toks);
-    }
-    else if (toks[0] == "stop") {
-        on_stop();
     }
     else if (toks[0] == "quit") {
         on_quit();
@@ -98,63 +94,45 @@ void UCIWSServer::on_uci() {
     server.broadcastMessage("uciok");
 }
 
-void UCIWSServer::on_isready() {
-    std::cout << "In method on_isready\n";
-    server.broadcastMessage("readyok");
-}
-
-void UCIWSServer::on_ucinewgame() {
+void UCIWSServer::on_ucinewgame(std::vector<std::string>& toks) {
     std::cout << "In method on_ucinewgame\n";
-    b = Board();
+    if (b == nullptr) delete b;
+    if (e == nullptr) delete e;
+    e = new Engine();
+    e->time_left = std::chrono::milliseconds(stoi(toks[2]));
+    if (toks[1] == "board-7-3") {
+        b = new Board(SEVEN_THREE);
+    }
+    else if (toks[1] == "board-8-4") {
+        b = new Board(EIGHT_FOUR);
+    }
+    else if (toks[1] == "board-8-2") {
+        b = new Board(EIGHT_TWO);
+    }
+    else {
+        std::cout << "Received invalid board type from server\n";
+    }
+    server.broadcastMessage("newgameok");
 }
 
 void UCIWSServer::on_position(std::vector<std::string>& toks) {
     std::cout << "In method on_position\n";
     if (toks.size() > 3) {
-        b.do_move(str_to_move(toks[toks.size()-1]));
+        b->do_move_(str_to_move(toks[toks.size()-1]));
     }
 }
 
 void UCIWSServer::on_go(std::vector<std::string>& toks) {
     std::cout << "In method on_go\n";
     // launch a thread to find the best move
-    e.search = true;
+    // e->time_left = std::chrono::milliseconds(stoi(toks[1]));
     this->game_thread = std::thread([this]() {
-        e.find_best_move(b);
+        e->find_best_move(*b);
+        sleep(2);
+        server.broadcastMessage("bestmove " + move_to_str(e->best_move));
+        b->do_move_(e->best_move);
     });
-}
-
-void UCIWSServer::on_stop() {
-    std::cout << "In method on_stop\n";
-    e.search = false;
     this->game_thread.join();
-    U16 move = e.best_move;
-
-    // move checking
-    auto legal_moves = b.get_legal_moves();
-
-    assert(legal_moves.size() > 0);
-    assert(legal_moves.count(move) > 0);
-    b.do_move(move);
-
-    auto str_move = move_to_str(move);
-    auto opp_moves = b.get_legal_moves();
-    if (b.in_check()) { // opponent is in check because of our move
-        if (opp_moves.size() > 0) {
-            // check
-            str_move += '+';
-        }
-        else {
-            // checkmate
-            str_move += '#';
-        }
-    }
-    else if (opp_moves.size() == 0) {
-        // stalemate
-        str_move += '-';
-    }
-
-    server.broadcastMessage("bestmove " + move_to_str(move));
 }
 
 void UCIWSServer::on_quit() {

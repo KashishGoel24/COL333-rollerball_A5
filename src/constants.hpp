@@ -17,6 +17,11 @@ typedef uint16_t U16;
 
 #define DEAD 0xff
 
+#define color(p) ((PlayerColor)(p & (WHITE | BLACK)))
+#define oppcolor(p) ((PlayerColor)(color(p) ^ (WHITE | BLACK)))
+#define occupied(b, p, c) (b[(p)] & (c))
+#define inboard(b, x, y) (((x) <= 7) && ((x) >= 0) && ((y) <= 7) && ((y) >= 0) && (b[pos((x),(y))] != 1))
+
 constexpr U8 cw_90_7x7[64] = {
     48, 40, 32, 24, 16, 8,  0,  7,
     49, 41, 33, 25, 17, 9,  1,  15,

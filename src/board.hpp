@@ -13,10 +13,10 @@ struct Board {
     Board();
     Board(BoardType btype);
     Board(BoardData bdata);
+    Board(const Board& source);
 
     std::unordered_set<U16> get_legal_moves() const;
     bool in_check() const;
-    Board* copy() const;
     void do_move_(U16 move);
 
     std::unordered_set<U16> get_pseudolegal_moves() const;

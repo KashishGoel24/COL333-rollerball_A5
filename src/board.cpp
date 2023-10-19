@@ -1,13 +1,9 @@
 #include <string>
 #include <iostream>
 #include "board.hpp"
+#include "butils.hpp"
 #include "constants.hpp"
 #include <cstring>
-
-#define color(p) ((PlayerColor)(p & (WHITE | BLACK)))
-#define oppcolor(p) ((PlayerColor)(color(p) ^ (WHITE | BLACK)))
-#define occupied(b, p, c) (b[(p)] & (c))
-#define inboard(b, x, y) (((x) <= 7) && ((x) >= 0) && ((y) <= 7) && ((y) >= 0) && (b[pos((x),(y))] != 1))
 
 std::unordered_set<U16> transform_moves(const std::unordered_set<U16>& moves, const U8 *transform) {
 
@@ -203,29 +199,32 @@ std::unordered_set<U16> construct_king_moves(const U8 p0, const U8 *board, const
 std::unordered_set<U16> Board::get_pseudolegal_moves_for_piece(U8 piece_pos) const {
 
     std::unordered_set<U16> moves;
-    U8 piece_id = this->data.board[0][piece_pos];
+    U8 piece_id = this->data.board_0[piece_pos];
     int board_idx = data.board_mask[piece_pos] - 2;
     const U8 *transform_arr = this->data.transform_array[board_idx];
     const U8 *inv_transform_arr = this->data.inverse_transform_array[board_idx];
-    const U8 *board = this->data.board[board_idx];
+
+    const U8 *board = this->data.board_0;
+    if (board_idx == 1) board = this->data.board_270;
+    if (board_idx == 2) board = this->data.board_180;
+    if (board_idx == 3) board = this->data.board_90;
 
     if (piece_id & PAWN) {
-        moves = construct_pawn_moves(transform_arr[piece_pos], board, this->data.board_mask,
+        moves = construct_pawn_moves(inv_transform_arr[piece_pos], board, this->data.board_mask,
                 (U8*)this->data.pawn_promo_squares, this->data.n_pawn_promo_squares,
                 (board_idx==2 && (piece_id & WHITE)) || (board_idx==0 && (piece_id & BLACK)));
     }
     else if (piece_id & ROOK) {
-        moves = construct_rook_moves(transform_arr[piece_pos], board, this->data.board_mask);
+        moves = construct_rook_moves(inv_transform_arr[piece_pos], board, this->data.board_mask);
     }
     else if (piece_id & BISHOP) {
-        moves = construct_bishop_moves(transform_arr[piece_pos], board, this->data.board_mask);
+        moves = construct_bishop_moves(inv_transform_arr[piece_pos], board, this->data.board_mask);
     }
     else if (piece_id & KING) {
-        moves = construct_king_moves(transform_arr[piece_pos], board, this->data.board_mask);
+        moves = construct_king_moves(inv_transform_arr[piece_pos], board, this->data.board_mask);
     }
 
-    moves = transform_moves(moves, inv_transform_arr);
-
+    moves = transform_moves(moves, transform_arr);
     return moves;
 }
 
@@ -234,7 +233,11 @@ Board::Board(): data{SEVEN_THREE} {}
 Board::Board(BoardType btype): data{btype} {}
 
 Board::Board(BoardData bdata) {
-    this->data = bdata;
+    this->data = bdata; // copy constructor
+}
+
+Board::Board(const Board& source) {
+    this->data = source.data; // copy constructor
 }
 
 bool Board::under_threat(U8 piece_pos) const {
@@ -256,7 +259,6 @@ bool Board::under_threat(U8 piece_pos) const {
 bool Board::in_check() const {
 
     auto king_pos = this->data.w_king;
-    // can make this branchless for kicks but won't add much performance
     if (this->data.player_to_play == BLACK) {
         king_pos = this->data.b_king;
     }
@@ -274,22 +276,15 @@ std::unordered_set<U16> Board::get_pseudolegal_moves_for_side(U8 color) const {
 
     int si = (color>>7) * 10;
 
+    U8 *pieces = (U8*)(&this->data);
     for (int i=0; i<this->data.n_pieces; i++) {
-        U8 *piece = this->data.pieces[si+i];
-        if (*piece == DEAD) continue;
-        auto piece_moves = this->get_pseudolegal_moves_for_piece(*piece);
+        U8 piece = pieces[si+i];
+        if (piece == DEAD) continue;
+        auto piece_moves = this->get_pseudolegal_moves_for_piece(piece);
         pseudolegal_moves.insert(piece_moves.begin(), piece_moves.end());
     }
 
     return pseudolegal_moves;
-}
-
-Board* Board::copy() const {
-
-    Board *b = new Board();
-    memcpy(&(b->data), &(this->data), sizeof(BoardData));
-
-    return b;
 }
 
 // legal move generation:
@@ -301,21 +296,22 @@ Board* Board::copy() const {
 //         add to legal moves
 std::unordered_set<U16> Board::get_legal_moves() const {
 
-    Board* c = this->copy();
-    auto pseudolegal_moves = c->get_pseudolegal_moves();
+    Board c(*this);
+    auto pseudolegal_moves = c.get_pseudolegal_moves();
     std::unordered_set<U16> legal_moves;
 
     for (auto move : pseudolegal_moves) {
-        c->do_move_without_flip_(move);
+        c.do_move_without_flip_(move);
 
-        if (!c->in_check()) {
+        if (!c.in_check()) {
             legal_moves.insert(move);
         }
+        else {
+            std::cout << "Move " << move_to_str(move) << " is illegal" << std::endl;
+        }
 
-        c->undo_last_move_without_flip_(move);
+        c.undo_last_move_without_flip_(move);
     }
-
-    delete c;
 
     return legal_moves;
 }
@@ -340,16 +336,15 @@ void Board::do_move_without_flip_(U16 move) {
     this->data.last_killed_piece_idx = -1;
 
     // scan and get piece from coord
-    U8 **pieces = this->data.pieces;
+    U8 *pieces = (U8*)this;
     for (int i=0; i<2*this->data.n_pieces; i++) {
-        U8 *piece = pieces[i];
-        if (*piece == p1) {
-            *piece = DEAD;
+        if (pieces[i] == p1) {
+            pieces[i] = DEAD;
             this->data.last_killed_piece = this->data.board_0[p1];
             this->data.last_killed_piece_idx = i;
         }
-        if (*piece == p0) {
-            *piece = p1;
+        if (pieces[i] == p0) {
+            pieces[i] = p1;
         }
     }
 
@@ -360,15 +355,15 @@ void Board::do_move_without_flip_(U16 move) {
         piecetype = (piecetype & (WHITE | BLACK)) | BISHOP;
     }
 
-    this->data.board_0[p1]               = piecetype;
-    this->data.board_90[cw_90_7x7[p1]]   = piecetype;
-    this->data.board_180[cw_180_7x7[p1]] = piecetype;
-    this->data.board_270[acw_90_7x7[p1]] = piecetype;
+    this->data.board_0  [this->data.transform_array[0][p1]] = piecetype;
+    this->data.board_90 [this->data.transform_array[1][p1]] = piecetype;
+    this->data.board_180[this->data.transform_array[2][p1]] = piecetype;
+    this->data.board_270[this->data.transform_array[3][p1]] = piecetype;
 
-    this->data.board_0[p0]               = 0;
-    this->data.board_90[cw_90_7x7[p0]]   = 0;
-    this->data.board_180[cw_180_7x7[p0]] = 0;
-    this->data.board_270[acw_90_7x7[p0]] = 0;
+    this->data.board_0  [this->data.transform_array[0][p0]] = 0;
+    this->data.board_90 [this->data.transform_array[1][p0]] = 0;
+    this->data.board_180[this->data.transform_array[2][p0]] = 0;
+    this->data.board_270[this->data.transform_array[3][p0]] = 0;
 
 }
 
@@ -383,16 +378,15 @@ void Board::undo_last_move_without_flip_(U16 move) {
     this->data.last_killed_piece = 0;
 
     // scan and get piece from coord
-    U8 **pieces = this->data.pieces;
-    for (int i=0; i<12; i++) {
-        U8 *piece = pieces[i];
-        if (*piece == p1) {
-            *piece = p0;
+    U8 *pieces = (U8*)(&(this->data));
+    for (int i=0; i<2*this->data.n_pieces; i++) {
+        if (pieces[i] == p1) {
+            pieces[i] = p0;
             break;
         }
     }
     if (this->data.last_killed_piece_idx >= 0) {
-        *pieces[this->data.last_killed_piece_idx] = p1;
+        pieces[this->data.last_killed_piece_idx] = p1;
         this->data.last_killed_piece_idx = -1;
     }
 
@@ -403,14 +397,14 @@ void Board::undo_last_move_without_flip_(U16 move) {
         piecetype = ((piecetype & (WHITE | BLACK)) ^ BISHOP) | PAWN;
     }
 
-    this->data.board_0[p0]               = piecetype;
-    this->data.board_90[cw_90_7x7[p0]]   = piecetype;
-    this->data.board_180[cw_180_7x7[p0]] = piecetype;
-    this->data.board_270[acw_90_7x7[p0]] = piecetype;
+    this->data.board_0  [this->data.transform_array[0][p1]] = deadpiece;
+    this->data.board_90 [this->data.transform_array[1][p1]] = deadpiece;
+    this->data.board_180[this->data.transform_array[2][p1]] = deadpiece;
+    this->data.board_270[this->data.transform_array[3][p1]] = deadpiece;
 
-    this->data.board_0[p1]               = deadpiece;
-    this->data.board_90[cw_90_7x7[p1]]   = deadpiece;
-    this->data.board_180[cw_180_7x7[p1]] = deadpiece;
-    this->data.board_270[acw_90_7x7[p1]] = deadpiece;
+    this->data.board_0  [this->data.transform_array[0][p0]] = piecetype;
+    this->data.board_90 [this->data.transform_array[1][p0]] = piecetype;
+    this->data.board_180[this->data.transform_array[2][p0]] = piecetype;
+    this->data.board_270[this->data.transform_array[3][p0]] = piecetype;
 
 }

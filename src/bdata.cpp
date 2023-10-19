@@ -1,4 +1,5 @@
 #include <string>
+#include <algorithm>
 #include "board.hpp"
 #include "constants.hpp"
 
@@ -109,3 +110,45 @@ BoardData::BoardData(BoardType btype) {
 }
 
 BoardData::BoardData() {}
+
+BoardData::BoardData(const BoardData& source) {
+
+    this->b_rook_1   = source.b_rook_1   ;
+    this->b_rook_2   = source.b_rook_2   ;
+    this->b_king     = source.b_king     ;
+    this->b_bishop   = source.b_bishop   ;
+    this->b_knight_1 = source.b_knight_1 ;
+    this->b_knight_2 = source.b_knight_2 ;
+    this->b_pawn_1   = source.b_pawn_1   ;
+    this->b_pawn_2   = source.b_pawn_2   ;
+    this->b_pawn_3   = source.b_pawn_3   ;
+    this->b_pawn_4   = source.b_pawn_4   ;
+                                         ;
+    this->w_rook_1   = source.w_rook_1   ;
+    this->w_rook_2   = source.w_rook_2   ;
+    this->w_king     = source.w_king     ;
+    this->w_bishop   = source.w_bishop   ;
+    this->w_knight_1 = source.w_knight_1 ;
+    this->w_knight_2 = source.w_knight_2 ;
+    this->w_pawn_1   = source.w_pawn_1   ;
+    this->w_pawn_2   = source.w_pawn_2   ;
+    this->w_pawn_3   = source.w_pawn_3   ;
+    this->w_pawn_4   = source.w_pawn_4   ;
+
+    memcpy(this->board_0  , source.board_0  , 64);
+    memcpy(this->board_90 , source.board_90 , 64);
+    memcpy(this->board_180, source.board_180, 64);
+    memcpy(this->board_270, source.board_270, 64);
+
+    this->board_type = source.board_type;
+    this->board_mask = source.board_mask;
+    this->player_to_play = source.player_to_play;
+    this->last_killed_piece = source.last_killed_piece;
+    this->last_killed_piece_idx = source.last_killed_piece_idx;
+
+    memcpy(this->transform_array, source.transform_array, 4*sizeof(U8*));
+    memcpy(this->inverse_transform_array, source.inverse_transform_array, 4*sizeof(U8*));
+
+    memcpy(this->pawn_promo_squares, source.pawn_promo_squares, 10);
+    this->n_pawn_promo_squares = source.n_pawn_promo_squares;
+}
