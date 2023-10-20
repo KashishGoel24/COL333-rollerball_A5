@@ -1,106 +1,217 @@
 <script setup>
 import ChessBoard from 'chessboardjs-vue3';
-import {onMounted, reactive} from 'vue';
+import Board from './components/Board.vue'
+import {onMounted, reactive, watch} from 'vue';
 
 const state = reactive({
-    white_address: 'localhost:8181',
-    black_address: 'localhost:8182',
-    thinking_time: 60,
 
-    w_conn_btn_state: 'button-to-connect',
-    w_conn_btn_text: 'Connect White Bot',
-    b_conn_btn_state: 'button-to-connect',
-    b_conn_btn_text: 'Connect Black Bot',
-    game_btn_state: 'button-to-start',
-    game_btn_text: 'Start Game',
+    sockets : {
+        white : {
+            socket : null,
+            address : 'localhost:8181',
+            state : 'disconnected'
+        },
+        black : {
+            socket : null,
+            address : 'localhost:8182',
+            state : 'disconnected'
+        }
+    },
 
-    board_class: 'board-7-3',
-    board_enclose_class: 'board-enclose-7-3',
+    game : {
+        type  : 'board-7-3',
+        state : 'idle',
+        curr_player : 'white',
+        move_list : [],
+        position_list : []
+    },
 
-    left_info: 'rollerball v.2.0',
-    right_info: 'Rev. Oct 24, 2023',
+    players : {
+        white : 'waiting',
+        black : 'waiting'
+    },
 
-    ws_white: null,
-    ws_black: null,
+    timer : {
+        time_limit: 60,
+        white : {
+            time_ms : 0
+        },
+        black : {
+            time_ms : 0
+        }
+    },
 
-    game: null,
-    in_progress: false,
-    curr_player: 'white',
+    info : {
+        left  : 'rollerball v.2.0',
+        right : 'Rev. Oct 24, 2023'
+    }
 
-    w_time_left: 0,
-    b_time_left: 0
+});
 
-})
+var timer_interval = null;
 
-const pos_7_3 = {
-    c1: 'wP',
-    c2: 'wP',
-    d1: 'wB',
-    d2: 'wK',
-    e1: 'wR',
-    e2: 'wR',
+const INTERVAL = 50;
 
-    c6: 'bR',
-    c7: 'bR',
-    d6: 'bK',
-    d7: 'bB',
-    e6: 'bP',
-    e7: 'bP'
+function send_message(side, message) {
+
+    if (state.sockets[side].state === 'connected') {
+        state.sockets[side].socket.send(message);
+    }
+    else {
+        stop_game(`The ${side} side disconnected arbitrarily`);
+    }
+
 }
 
-const pos_8_4 = {
-    c1: 'wP',
-    c2: 'wP',
-    d1: 'wB',
-    d2: 'wK',
-    e1: 'wR',
-    e2: 'wR',
-    f1: 'wP',
-    f2: 'wP',
+function process_message(side, message) {
 
-    c7: 'bP',
-    c8: 'bP',
-    d7: 'bR',
-    d8: 'bR',
-    e7: 'bK',
-    e8: 'bB',
-    f7: 'bP',
-    f8: 'bP'
+    var tokens = message.trim().split(' ');
+    var command = tokens[0];
+
+    if      (command === 'uciok')        on_uciok(tokens);
+    else if (command === 'ucinewgameok') on_ucinewgameok(tokens);
+    else if (command === 'bestmove')     on_bestmove(tokens);
+    else {
+        stop_game(`Unknown command ${command} received from ${side}`);
+    }
 }
 
-const pos_8_2 = {
-    c1: 'wP',
-    c2: 'wP',
-    c3: 'wP',
-    d2: 'wN',
-    d3: 'wN',
-    e2: 'wK',
-    e3: 'wB',
-    f1: 'wR',
-    f2: 'wR',
-    f3: 'wP',
+function connect_socket(side) {
 
-    c8: 'bR',
-    c7: 'bR',
-    c6: 'bP',
-    d7: 'bK',
-    d6: 'bB',
-    e7: 'bN',
-    e6: 'bN',
-    f8: 'bP',
-    f7: 'bP',
-    f6: 'bP',
+    state.sockets[side].state  = 'connecting';
+    state.sockets[side].socket = new WebSocket(`ws://${state.sockets[side].address}`);
+
+    state.sockets[side].onopen = (event) => {
+        state.ws_white.send("uci");
+    }
+
+    state.sockets[side].onerror = (err) => {
+        state.right_info = `Could not connect to ${side} bot`;
+        state.sockets[side].state = 'disconnected';
+    }
+    
+    state.sockets[side].onmessage = (msg) => {
+        state.game.process_uci_command(side, msg.data);
+    }
+}
+
+function disconnect_socket(side) {
+    state.sockets[side].socket.close();
+    state.sockets[side].socket.state = 'disconnected';
+}
+
+function tick() {
+
+    if (state.game.state === 'white_thinking') {
+        state.timer.white.time_ms -= INTERVAL;
+    }
+    else if (state.game.state === 'black_thinking') {
+        state.timer.black.time_ms -= INTERVAL;
+    }
+
+    if (state.timer.white.time_ms <= 0) {
+        stop_game('White lost by timeout');
+    }
+    else if (state.timer.black.time_ms <= 0) {
+        stop_game('Black lost by timeout');
+    }
+
+}
+
+function start_game() {
+
+    timer_interval = setInterval(tick, INTERVAL);
+    state.game.state = 'starting';
+    send_message('black', `ucinewgame ${state.game.type} ${state.timer.time_limit}`);
+    send_message('white', `ucinewgame ${state.game.type} ${state.timer.time_limit}`);
+
+}
+
+function stop_game(message = 'Something bad happened') {
+
+    clearInterval(timer_interval);
+    state.game.state = 'final';
+    state.info.right = message;
+    state.players.white = state.players.black = 'waiting';
+}
+
+function reset_game() {
+
+    state.game.state = 'idle'
+    state.game.curr_player = 'white'
+    state.game.move_list = []
+    state.game.position_list = []
+
+}
+
+function on_uciok(side, tokens) {
+    state.sockets[side].state = 'connected';
+    if (state.sockets.white.state === state.sockets.black.state && 
+        state.sockets.white.state === 'connected') {
+        state.game.state = 'ready';
+    }
+}
+
+function on_ucinewgameok(side, tokens) {
+
+    players[side] = 'ready';
+
+    if (players.white === 'ready' && players.black === 'ready') {
+        state.game.state = 'white_thinking';
+        players.white = 'thinking';
+        ask_for_move('white');
+    }
+        
+}
+
+function ask_for_move(side) {
+    move_message = `position startpos moves ${state.game.move_list.join(' ')}`;
+    send_message(side, move_message);
+    send_message(side, `go ${state.timer.white.time_ms}`);
+}
+
+function on_bestmove(side, tokens) {
+
+    var move = tokens[1];
+
+    // check if it's a null move. If yes, declare checkmate/stalemate
+    if (move === '0000') {
+        stop_game(`${side} gave a null move, indicating either Checkmate or Stalemante`);
+    }
+
+    state.game.move_list.append(move);
+
+    // check draw conditions - 3fold repetition (can skip for now?)
+
+    if (side === 'white') {
+        players.white = 'ready';
+        players.black = 'thinking';
+        state.game.state = 'black_thinking';
+        ask_for_move('black');
+    }
+    else if (side === 'black') {
+        players.white = 'thinking';
+        players.black = 'ready';
+        state.game.state = 'white_thinking';
+        ask_for_move('white');
+    }
+    else {
+        stop_game(`Bad side ${side} passed to on_bestmove`);
+    }
+
 }
 
 class Game {
 
     constructor() {
+        this.reset();
+    }
+
+    reset() {
+
         this.curr_player = 'white';
         this.w_time_left_ms = 0;
         this.b_time_left_ms = 0;
-        this.board = new ChessBoard('myBoard', {
-            'position': pos_7_3,
-        })
 
         this.player_state = {
             'white': 'uninitialized',
@@ -117,6 +228,14 @@ class Game {
 
         this.over = false;
     }
+    
+    start_stop() {
+        if (!state.in_progress) this.start();
+        else {
+            this.stop();
+            this.reset();
+        }
+    }
 
     start() {
 
@@ -128,8 +247,9 @@ class Game {
         state.b_time_left = state.thinking_time;
         this.w_timer = setInterval(() => {
             if (this.player_state['white'] == 'thinking') {
-                if (this.w_time_left < 50) {
+                if (this.w_time_left_ms < 50) {
                     state.left_info = 'White ran out of time';
+                    // TODO wait for reset!
                     this.stop();
                 }
                 this.w_time_left_ms -= 50;
@@ -141,7 +261,7 @@ class Game {
         }, 50);
         this.b_timer = setInterval(() => {
             if (this.player_state['black'] == 'thinking') {
-                if (this.b_time_left < 50) {
+                if (this.b_time_left_ms < 50) {
                     state.left_info = 'Black ran out of time';
                     this.stop();
                 }
@@ -153,22 +273,6 @@ class Game {
             }
         }, 50);
 
-        if (this.over) {
-
-            // restart
-            state.w_conn_btn_text = 'Connect White Bot';
-            state.w_conn_btn_state = 'button-to-connect';
-
-            state.b_conn_btn_text = 'Connect Black Bot';
-            state.b_conn_btn_state = 'button-to-connect';
-
-            state.game_btn_text = 'Start Game';
-            state.game_btn_state = 'button-to-start';
-
-            state.game = new Game();
-            return
-        }
-        
         if (this.player_state['white'] === 'uci_initialized' && this.player_state['black'] === 'uci_initialized') {
             this.dispatch_uci_command('white', `ucinewgame ${state.board_class} ${this.w_time_left_ms}`);
             this.dispatch_uci_command('black', `ucinewgame ${state.board_class} ${this.b_time_left_ms}`);
@@ -200,7 +304,7 @@ class Game {
 
             if (this.player_state['white'] === 'ready' && this.player_state['black'] === 'ready') {
                 state.game_btn_state = 'started';
-                state.game_btn_text = 'Game in progress';
+                state.game_btn_text = 'Stop Game';
                 this.do_move();
             }
         }
@@ -212,45 +316,22 @@ class Game {
                 // do move
                 this.player_state[this.curr_player] = 'ready';
                 var move = tokens[1];
-                if (move.length > 4 && move[4] !== '+') {
-                    // promote - this is harder than it needs to be
-                    var curr_pos = this.board.position();
-                    delete curr_pos[move.slice(0,2)];
-                    curr_pos[move.slice(2,4)] = this.curr_player[0] + move[4].toUpperCase();
-                    this.board.position(curr_pos, true);
-                    console.log(curr_pos);
-                }
-                else {
-                    var textmove = move.slice(0,2)+"-"+move.slice(2,4);
-                    this.board.move(textmove);
-                    console.log('Moved ' + textmove);
-                }
+
                 this.curr_player = this.next_player[player];
 
+                state.game_moves.push(move);
                 this.move_list.push(move);
-                this.position_list.push(this.board.fen());
+                // this.position_list.push(this.board.fen());
 
-                if (move.endsWith('#')) {
-                    state.left_info = player + " wins by Checkmate!";
-                    this.stop();
-                    return;
-                }
-                else if (move.endsWith('-')) {
-                    // Stalemate
-                    state.left_info = "Game drawn by Stalemate";
-                    this.stop();
-                    return;
-                }
-                else if (this.move_list.length >= 200) {
-                    // threefold repetition
+                if (this.move_list.length >= 200) {
                     state.left_info = "Game truncated at 100 moves";
                     this.stop();
                 }
-                else if (this.position_list.filter(x => x === this.board.fen()).length >= 3) {
-                    // threefold repetition
-                    state.left_info = "Game drawn by threefold repetition";
-                    this.stop();
-                }
+                // else if (this.position_list.filter(x => x === this.board.fen()).length >= 3) {
+                //     // threefold repetition
+                //     state.left_info = "Game drawn by threefold repetition";
+                //     this.stop();
+                // }
                 else if (this.player_state[this.curr_player] === 'ready') {
                     this.do_move();
                 }
@@ -280,9 +361,20 @@ class Game {
         state.ws_black.close();
 
         state.game_btn_state = 'button-to-start';
-        state.game_btn_text = 'Reset';
+        state.game_btn_text = 'Start Game';
+
+        state.w_conn_btn_state = 'button-to-connect';
+        state.w_conn_btn_text  = 'Connect White Bot';
+        state.b_conn_btn_state = 'button-to-connect';
+        state.b_conn_btn_text  = 'Connect Black Bot';
+
+        clearInterval(this.w_timer);
+        clearInterval(this.b_timer);
+        state.w_time_left = 0;
+        state.b_time_left = 0;
 
         this.over = true;
+        state.in_progress = false;
     }
 }
 
@@ -343,20 +435,14 @@ function connect_black() {
 
 function set_7_3_board() {
     state.board_class = 'board-7-3';
-    state.board_enclose_class = 'board-enclose-7-3';
-    state.game.board.position(pos_7_3, false);
 }
 
 function set_8_4_board() {
     state.board_class = 'board-8-4';
-    state.board_enclose_class = 'board-enclose-8-4';
-    state.game.board.position(pos_8_4, false);
 }
 
 function set_8_2_board() {
     state.board_class = 'board-8-2';
-    state.board_enclose_class = 'board-enclose-8-2';
-    state.game.board.position(pos_8_2, false);
 }
 
 </script>
@@ -380,16 +466,14 @@ function set_8_2_board() {
 <div class='button-bar'>
     <div class='button-enclose'><button :disabled='state.in_progress' :class='state.w_conn_btn_state' @click="connect_white" v-html="state.w_conn_btn_text"></button></div>
     <div class='button-enclose'><button :disabled='state.in_progress' :class='state.b_conn_btn_state' @click="connect_black" v-html="state.b_conn_btn_text"></button></div>
-    <div class='button-enclose'><button :disabled='state.in_progress' :class='state.game_btn_state' @click="state.game.start" v-html="state.game_btn_text"></button></div>
+    <div class='button-enclose'><button :class='state.game_btn_state' @click="state.game.start_stop" v-html="state.game_btn_text"></button></div>
 </div>
 <div class='timer'>
     <div class='time-left'>White: {{state.w_time_left}}</div>
     <div class='time-left'>Black: {{state.b_time_left}}</div>
 </div>
 
-<div :class='state.board_enclose_class'>
-<div id="myBoard" :class="state.board_class" style="width: 400px"></div>
-</div>
+<Board ref='board' :type='state.board_class' :moves="state.game !== null ? state.game.move_list : []" id='myBoard'/>
 
 <div class='button-bar'>
     <div class='button-enclose'><button :disabled='state.in_progress' class='button-to-start' @click="set_7_3_board">7_3 board</button></div>
@@ -522,82 +606,5 @@ input {
   border-bottom: solid 2px var(--vt-c-divider-dark-1);
   color: var(--vt-c-white);
   -moz-appearance: textfield;
-}
-
-div.board-enclose-7-3 {
-
-  padding-left: 50px;
-  padding-bottom: 20px;
-}
-
-div.board-enclose-8-4 {
-
-  padding-left: 0px;
-  padding-bottom: 20px;
-  padding-top: 20px;
-}
-
-div.board-enclose-8-2 {
-
-  padding-left: 0px;
-  padding-bottom: 20px;
-  padding-top: 20px;
-}
-
-.board-7-3 {
-  clip-path: polygon(
-      0px 65px, 
-      15px 50px, 
-      100px 50px, /* */
-      100px 300px,
-      250px 300px,
-      250px 150px,
-      100px 150px,
-      100px 50px, /* */
-      335px 50px, 
-      350px 65px, 
-      350px 385px, 
-      335px 400px, 
-      15px 400px, 
-      0px 385px
-  );
-}
-
-.board-8-4 {
-  clip-path: polygon(
-      0px 15px, 
-      15px 0px, 
-      100px 0px, /* */
-      100px 300px,
-      300px 300px,
-      300px 100px,
-      100px 100px,
-      100px 0px, /* */
-      385px 0px, 
-      400px 15px, 
-      400px 385px, 
-      385px 400px, 
-      15px 400px, 
-      0px 385px
-  );
-}
-
-.board-8-2 {
-  clip-path: polygon(
-      0px 15px, 
-      15px 0px, 
-      150px 0px, /* */
-      150px 250px,
-      250px 250px,
-      250px 150px,
-      150px 150px,
-      100px 0px, /* */
-      385px 0px, 
-      400px 15px, 
-      400px 385px, 
-      385px 400px, 
-      15px 400px, 
-      0px 385px
-  );
 }
 </style>
