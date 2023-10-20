@@ -78,11 +78,47 @@ void BoardData::set_7_3_layout() {
 }
 
 void BoardData::set_8_4_layout() {
-    // TODO
+    this->w_pawn_1 = pos(2,1);
+    this->w_pawn_2 = pos(2,0);
+    this->w_pawn_3 = pos(5,1);
+    this->w_pawn_4 = pos(5,0);
+    this->w_king   = pos(3,1);
+    this->w_bishop = pos(3,0);
+    this->w_rook_1 = pos(4,1);
+    this->w_rook_2 = pos(4,0);
+
+    this->b_pawn_1 = pos(2,6);
+    this->b_pawn_2 = pos(2,7);
+    this->b_king   = pos(4,6);
+    this->b_bishop = pos(4,7);
+    this->b_rook_1 = pos(3,6);
+    this->b_rook_2 = pos(3,7);
+    this->b_pawn_3 = pos(5,6);
+    this->b_pawn_4 = pos(5,7);
 }
 
 void BoardData::set_8_2_layout() {
-    // TODO
+    this->w_pawn_1   = pos(2,1);
+    this->w_pawn_2   = pos(2,0);
+    this->w_pawn_3   = pos(2,2);
+    this->w_pawn_4   = pos(5,2);
+    this->w_king     = pos(4,1);
+    this->w_knight_1 = pos(3,1);
+    this->w_knight_2 = pos(3,2);
+    this->w_bishop   = pos(4,2);
+    this->w_rook_1   = pos(5,1);
+    this->w_rook_2   = pos(5,0);
+
+    this->b_pawn_1   = pos(5,6);
+    this->b_pawn_2   = pos(5,7);
+    this->b_pawn_3   = pos(2,5);
+    this->b_pawn_4   = pos(5,5);
+    this->b_king     = pos(3,6);
+    this->b_knight_1 = pos(4,6);
+    this->b_knight_2 = pos(4,5);
+    this->b_bishop   = pos(3,5);
+    this->b_rook_1   = pos(2,6);
+    this->b_rook_2   = pos(2,7);
 }
 
 BoardData::BoardData(BoardType btype) {

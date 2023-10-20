@@ -11,6 +11,7 @@ char piece_to_char(U8 piece) {
     else if (piece & ROOK)   ch = 'r';
     else if (piece & BISHOP) ch = 'b';
     else if (piece & KING)   ch = 'k';
+    else if (piece & KNIGHT) ch = 'n';
 
     if (piece & WHITE) ch = ch - ('a'-'A');
 

@@ -149,6 +149,24 @@ std::unordered_set<U16> construct_bishop_moves(const U8 p0, const U8 *board, con
     return bishop_moves;
 }
 
+std::unordered_set<U16> construct_knight_moves(const U8 p0, const U8 *board, const U8 *bmask) {
+
+    PlayerColor color = color(board[p0]);
+    std::unordered_set<U16> knight_moves;
+
+    // similar to king moves
+    int x_incrs[8] = {1, 2,  2,  1, -1, -2, -2, -1};
+    int y_incrs[8] = {2, 1, -1, -2, -2, -1,  1,  2};
+
+    for (int i=0; i<8; i++) {
+        if (!inboard(bmask, getx(p0)+x_incrs[i], gety(p0)+y_incrs[i])) continue;
+        U8 p1 = pos(getx(p0)+x_incrs[i], gety(p0)+y_incrs[i]);
+        if (!occupied(board, p1, color)) knight_moves.insert(move(p0, p1));
+    }
+
+    return knight_moves;
+}
+
 bool can_promote(U8 pos, U8 *promo, int n_promo, bool promote) {
     for (int i=0; i<n_promo; i++) {
         if (promo[i] == pos) return true;
@@ -222,6 +240,9 @@ std::unordered_set<U16> Board::get_pseudolegal_moves_for_piece(U8 piece_pos) con
     }
     else if (piece_id & KING) {
         moves = construct_king_moves(inv_transform_arr[piece_pos], board, this->data.board_mask);
+    }
+    else if (piece_id & KNIGHT) {
+        moves = construct_knight_moves(inv_transform_arr[piece_pos], board, this->data.board_mask);
     }
 
     moves = transform_moves(moves, transform_arr);

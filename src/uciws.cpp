@@ -56,7 +56,7 @@ void UCIWSServer::handle_message(ClientConnection conn, const std::string& messa
 
 void UCIWSServer::start() {
 
-    //Register our network callbacks, ensuring the logic is run on the main thread's event loop
+    // Register our network callbacks, ensuring the logic is run on the main thread's event loop
     server.connect([this](ClientConnection conn)
     {
         this->main_evt_loop.post([conn, this]()
@@ -125,7 +125,7 @@ void UCIWSServer::on_position(std::vector<std::string>& toks) {
 void UCIWSServer::on_go(std::vector<std::string>& toks) {
     std::cout << "In method on_go\n";
     // launch a thread to find the best move
-    // e->time_left = std::chrono::milliseconds(stoi(toks[1]));
+    e->time_left = std::chrono::milliseconds(stoi(toks[1]));
     this->game_thread = std::thread([this]() {
         e->find_best_move(*b);
         sleep(2);

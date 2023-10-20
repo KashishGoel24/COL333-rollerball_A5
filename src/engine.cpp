@@ -12,6 +12,8 @@ void Engine::find_best_move(const Board& b) {
     
     auto moveset = b.get_legal_moves();
     if (moveset.size() == 0) {
+        std::cout << "Could not get any moves from board!\n";
+        std::cout << board_to_str(&b.data);
         this->best_move = 0;
     }
     else {
