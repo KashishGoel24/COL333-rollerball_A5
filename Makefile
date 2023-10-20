@@ -12,14 +12,16 @@ rollerball:
 package:
 	mkdir -p build
 	rm -rf build/*
-	mkdir build/rollerball build/rollerball/src
+	mkdir build/rollerball build/rollerball/src build/rollerball/websrc
 	cp -r include build/rollerball/include
 	cp src/*.hpp build/rollerball/src/
-	cp src/board.cpp src/bindings.cpp src/engine.cpp src/engine_py.cpp src/rollerball.cpp src/server.cpp src/uciws.cpp build/rollerball/src/
+	cp $(SRC) build/rollerball/src/
 	cp -r scripts build/rollerball/scripts
-	cp engine.py setup.py build/rollerball/
 	cp Makefile build/rollerball/
 	cd web && npm run build
+	cp -r web/src build/rollerball/websrc/src
+	cp -r web/public build/rollerball/websrc/public
+	cp web/README.md web/index.html web/package-lock.json web/package.json web/vite.config.js build/rollerball/websrc/
 	cp -r web/dist build/rollerball/web
 	cd build && zip -r rollerball.zip rollerball
 
