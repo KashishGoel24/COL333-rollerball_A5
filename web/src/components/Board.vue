@@ -105,6 +105,7 @@ function reset(type) {
     var sp = pos_7_3;
     if (type === 'board-8-4') sp = pos_8_4;
     else if (type === 'board-8-2') sp = pos_8_2;
+    state.prev_move_list_str = '';
 
     if (state.board !== null) {
         state.board.position(sp, false);
@@ -113,7 +114,7 @@ function reset(type) {
 
 function update_moves(moves) {
 
-    if (moves === []) {
+    if (moves.length === 0) {
         reset(props.type);
         return;
     }
@@ -135,25 +136,25 @@ function update_moves(moves) {
 </script>
 
 <template>
-<div :class='enclosing_class.value'>
+<div :class='enclosing_class'>
     <div :id="props.id" :class="props.type" style="width: 400px"></div>
 </div>
 </template>
 
 <style scoped>
 
-div.board-enclose-7-3 {
+div.enclose-board-7-3 {
   padding-left: 50px;
   padding-bottom: 20px;
 }
 
-div.board-enclose-8-4 {
+div.enclose-board-8-4 {
   padding-left: 0px;
   padding-bottom: 20px;
   padding-top: 20px;
 }
 
-div.board-enclose-8-2 {
+div.enclose-board-8-2 {
   padding-left: 0px;
   padding-bottom: 20px;
   padding-top: 20px;

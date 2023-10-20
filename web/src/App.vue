@@ -42,7 +42,7 @@ const state = reactive({
     },
 
     info : {
-        left  : 'rollerball v.2.0',
+        left  : 'Rollerball v.2.0',
         right : 'Rev. Oct 24, 2023'
     }
 
@@ -68,9 +68,9 @@ function process_message(side, message) {
     var tokens = message.trim().split(' ');
     var command = tokens[0];
 
-    if      (command === 'uciok')        on_uciok(side, tokens);
-    else if (command === 'ucinewgameok') on_ucinewgameok(side, tokens);
-    else if (command === 'bestmove')     on_bestmove(side, tokens);
+    if      (command === 'uciok')     on_uciok(side, tokens);
+    else if (command === 'newgameok') on_newgameok(side, tokens);
+    else if (command === 'bestmove')  on_bestmove(side, tokens);
     else {
         stop_game(`Unknown command ${command} received from ${side}`);
     }
@@ -120,6 +120,8 @@ function tick() {
 
 function start_game() {
 
+    state.timer.white.time_ms = state.timer.time_limit * 1000;
+    state.timer.black.time_ms = state.timer.time_limit * 1000;
     timer_interval = setInterval(tick, INTERVAL);
     state.game.state = 'starting';
     send_message('black', `ucinewgame ${state.game.type} ${state.timer.time_limit}`);
@@ -129,6 +131,8 @@ function start_game() {
 
 function stop_game(message = 'Something bad happened') {
 
+    send_message('black', 'quit');
+    send_message('white', 'quit');
     clearInterval(timer_interval);
     state.game.state = 'final';
     state.info.right = message;
@@ -137,10 +141,10 @@ function stop_game(message = 'Something bad happened') {
 
 function reset_game() {
 
-    state.game.state = 'idle'
+    state.game.state = 'ready'
     state.game.curr_player = 'white'
-    state.game.move_list = []
-    state.game.position_list = []
+    state.game.move_list.splice(0);
+    state.game.position_list.splice(0);
 
 }
 
@@ -152,25 +156,31 @@ function on_uciok(side, tokens) {
     }
 }
 
-function on_ucinewgameok(side, tokens) {
+function on_newgameok(side, tokens) {
 
-    players[side] = 'ready';
+    state.players[side] = 'ready';
 
-    if (players.white === 'ready' && players.black === 'ready') {
+    if (state.players.white === 'ready' && state.players.black === 'ready') {
         state.game.state = 'white_thinking';
-        players.white = 'thinking';
+        state.players.white = 'thinking';
         ask_for_move('white');
     }
         
 }
 
 function ask_for_move(side) {
-    move_message = `position startpos moves ${state.game.move_list.join(' ')}`;
+    var move_message = `position startpos moves ${state.game.move_list.join(' ')}`;
     send_message(side, move_message);
     send_message(side, `go ${state.timer.white.time_ms}`);
 }
 
 function on_bestmove(side, tokens) {
+
+    if (state.game.state !== 'white_thinking' && 
+        state.game.state !== 'black_thinking') {
+        // silently discard
+        return;
+    }
 
     var move = tokens[1];
 
@@ -179,19 +189,19 @@ function on_bestmove(side, tokens) {
         stop_game(`${side} gave a null move, indicating either Checkmate or Stalemante`);
     }
 
-    state.game.move_list.append(move);
+    state.game.move_list.push(move);
 
     // check draw conditions - 3fold repetition (can skip for now?)
 
     if (side === 'white') {
-        players.white = 'ready';
-        players.black = 'thinking';
+        state.players.white = 'ready';
+        state.players.black = 'thinking';
         state.game.state = 'black_thinking';
         ask_for_move('black');
     }
     else if (side === 'black') {
-        players.white = 'thinking';
-        players.black = 'ready';
+        state.players.white = 'thinking';
+        state.players.black = 'ready';
         state.game.state = 'white_thinking';
         ask_for_move('white');
     }
@@ -211,6 +221,7 @@ function disable_on_disconnect(s) {
 
 watch(() => state.sockets.white.state, disable_on_disconnect);
 watch(() => state.sockets.black.state, disable_on_disconnect);
+// watch(() => state.game.state, (state) => {console.log(state)});
 
 //-- UI Stuff ----------------------------------------------------------------- 
 
@@ -218,8 +229,7 @@ watch(() => state.sockets.black.state, disable_on_disconnect);
 function socket_btn_disabled_closure(side) {
     return () => {
         if ((state.game.state === 'idle'  || 
-             state.game.state === 'ready' || 
-             state.game.state === 'final') && 
+             state.game.state === 'ready') && 
              state.sockets[side].state !== 'connecting') {
             return false;
         }
@@ -230,9 +240,9 @@ function socket_btn_disabled_closure(side) {
 function socket_btn_class_closure(side) {
 
     return () => {
-        if (state.sockets[side].state === 'connected') return 'button-connected';
-        else if (state.sockets[side].state === 'connecting') return 'button-connecting';
-        else if (state.sockets[side].state === 'disconnected') return 'button-to-connect';
+        if (state.sockets[side].state === 'connected') return 'button-green';
+        else if (state.sockets[side].state === 'connecting') return 'button-red';
+        else if (state.sockets[side].state === 'disconnected') return 'button-yellow';
         else {
             console.log('ERROR: Invalid socket state');
             return 'button-to-connect';
@@ -266,6 +276,76 @@ function socket_btn_click(side) {
     else connect_socket(side);
 }
 
+const game_btn_class = computed(() => {
+    
+    if (state.game.state === 'starting') {
+        return 'button-red';
+    }
+    else if (state.game.state === 'white_thinking' || 
+             state.game.state === 'black_thinking' ) {
+        return 'button-green';
+    }
+    else return 'button-yellow';
+
+});
+
+const game_btn_text = computed(() => {
+
+    if (state.game.state === 'white_thinking' || 
+        state.game.state === 'black_thinking') {
+        return 'Stop Game';
+    }
+    else if (state.game.state === 'final') {
+        return 'Reset Game';
+    }
+    else if (state.game.state === 'starting') {
+        return 'Starting Game';
+    }
+    else return 'Start Game';
+
+});
+
+const game_btn_disabled = computed(() => {
+    if (state.game.state === 'idle' || state.game.state === 'starting') return true;
+    return false;
+});
+
+function game_btn_click() {
+
+    if (state.game.state === 'ready') {
+        start_game();
+    }
+    else if (state.game.state === 'white_thinking' || 
+             state.game.state === 'black_thinking') {
+        stop_game('Game stopped by user');
+    }
+    else if (state.game.state === 'final') {
+        reset_game();
+    }
+}
+
+const board_btns_disabled = computed(() => {
+    if (state.game.state === 'ready' || state.game.state === 'idle') return false;
+    return true;
+});
+
+function set_board_type(value) {
+    state.game.type = value;
+}
+
+const timer_classes = computed(() => {
+
+    var classes = ['timer'];
+    if (!(state.game.state === 'white_thinking' ||
+          state.game.state === 'black_thinking' || 
+          state.game.state === 'final')) {
+        classes.push('hidden');
+    }
+
+    return classes;
+
+});
+
 </script>
 
 <template>
@@ -298,27 +378,44 @@ function socket_btn_click(side) {
                 v-html="black_socket_btn_text"></button>
     </div>
     <div class='button-enclose'>
-        <button :class='state.game_btn_state' 
-                @click="state.game.start_stop" 
-                v-html="state.game_btn_text"></button>
+        <button :disabled="game_btn_disabled" 
+                :class='game_btn_class' 
+                @click="game_btn_click" 
+                v-html="game_btn_text"></button>
     </div>
 </div>
-<div class='timer'>
-    <div class='time-left'>White: {{Math.ceil(state.timer.white.time_ms / 1000)}}</div>
-    <div class='time-left'>Black: {{Math.ceil(state.timer.black.time_ms / 1000)}}</div>
+<div :class='timer_classes'>
+    <div class='time-left'>White: 
+        <span class='time'>{{(state.timer.white.time_ms / 1000).toFixed(1)}}</span>
+    </div>
+    <div class='time-left'>Black: 
+        <span class='time'>{{(state.timer.black.time_ms / 1000).toFixed(1)}}</span>
+    </div>
 </div>
 
 <Board ref='board' :type='state.game.type' :moves="state.game.move_list" id='myBoard'/>
 
 <div class='button-bar'>
-    <div class='button-enclose'><button :disabled='state.in_progress' class='button-to-start' @click="set_7_3_board">7_3 board</button></div>
-    <div class='button-enclose'><button :disabled='state.in_progress' class='button-to-start' @click="set_8_4_board">8_4 board</button></div>
-    <div class='button-enclose'><button :disabled='state.in_progress' class='button-to-start' @click="set_8_2_board">8_2 board</button></div>
+    <div class='button-enclose'>
+        <button :disabled='board_btns_disabled' 
+                 class='button-yellow' 
+                @click="set_board_type('board-7-3')">7_3 board</button>
+    </div>
+    <div class='button-enclose'>
+        <button :disabled='board_btns_disabled' 
+                 class='button-yellow' 
+                @click="set_board_type('board-8-4')">8_4 board</button>
+    </div>
+    <div class='button-enclose'>
+        <button :disabled='board_btns_disabled' 
+                 class='button-yellow' 
+                @click="set_board_type('board-8-2')">8_2 board</button>
+    </div>
 </div>
 
 <div class='info-bar'>
-    <label class='left-info' v-html="state.left_info"></label>
-    <label class='right-info' v-html="state.right_info"></label>
+    <label class='left-info' v-html="state.info.left"></label>
+    <label class='right-info' v-html="state.info.right"></label>
 </div>
 </template>
 
@@ -349,6 +446,16 @@ div.time-left {
     font-size: 14pt;
 }
 
+.hidden {
+    visibility: hidden;
+}
+
+.time {
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 14pt;
+}
+
 div.book-container {
   display: flex;
   flex-direction: column;
@@ -362,15 +469,15 @@ div.button-enclose {
   text-align: center;
 }
 
-button.button-connected,button.started {
+button.button-green {
   background-color: ForestGreen;
 }
 
-button.button-to-start,button.button-to-connect {
+button.button-yellow {
   background-color: GoldenRod;
 }
 
-button.button-connecting {
+button.button-red {
   background-color: Crimson;
 }
 
@@ -383,9 +490,7 @@ button:active {
 }
 
 button:disabled {
-
   filter: brightness(40%);
-
 }
 
 button {
