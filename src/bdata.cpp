@@ -75,6 +75,10 @@ void BoardData::set_7_3_layout() {
     this->w_bishop = pos(3,0);
     this->w_pawn_1 = pos(2,1);
     this->w_pawn_2 = pos(2,0);
+
+    this->pawn_promo_squares[0] = pos(2,0);
+    this->pawn_promo_squares[1] = pos(2,1);
+    this->n_pawn_promo_squares = 2;
 }
 
 void BoardData::set_8_4_layout() {
@@ -95,6 +99,10 @@ void BoardData::set_8_4_layout() {
     this->b_rook_2 = pos(3,7);
     this->b_pawn_3 = pos(5,6);
     this->b_pawn_4 = pos(5,7);
+
+    this->pawn_promo_squares[0] = pos(2,0);
+    this->pawn_promo_squares[1] = pos(2,1);
+    this->n_pawn_promo_squares = 2;
 }
 
 void BoardData::set_8_2_layout() {
@@ -119,6 +127,11 @@ void BoardData::set_8_2_layout() {
     this->b_bishop   = pos(3,5);
     this->b_rook_1   = pos(2,6);
     this->b_rook_2   = pos(2,7);
+
+    this->pawn_promo_squares[0] = pos(2,0);
+    this->pawn_promo_squares[0] = pos(2,1);
+    this->pawn_promo_squares[0] = pos(2,2);
+    this->n_pawn_promo_squares = 3;
 }
 
 BoardData::BoardData(BoardType btype) {

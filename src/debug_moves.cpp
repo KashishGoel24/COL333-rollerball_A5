@@ -20,12 +20,15 @@ int main(int argc, char** argv) {
 
     BoardData d;
 
-    Board b(EIGHT_TWO);
+    // Board b(EIGHT_TWO);
 
-    // d.board_type = EIGHT_FOUR;
-    // d.set_8x8_transforms();
-    // d.board_mask = (U8*)board_8_4;
-    // d.w_pawn_1 = pos(2,1);
+    d.board_type = EIGHT_FOUR;
+    d.set_8x8_transforms();
+    d.board_mask = (U8*)board_8_4;
+    d.b_pawn_1 = pos(3,1);
+    d.pawn_promo_squares[0] = pos(2,1);
+    d.pawn_promo_squares[1] = pos(2,0);
+    d.n_pawn_promo_squares = 2;
     // d.w_pawn_2 = pos(2,0);
     // d.w_pawn_3 = pos(5,1);
     // d.w_pawn_4 = pos(5,0);
@@ -33,10 +36,10 @@ int main(int argc, char** argv) {
     // d.w_bishop = pos(3,0);
     // d.w_rook_1 = pos(4,1);
     // d.w_rook_2 = pos(4,0);
-    // d.player_to_play = BLACK;
-    // d.set_pieces_on_board();
+    d.player_to_play = BLACK;
+    d.set_pieces_on_board();
 
-    // Board b(d);
+    Board b(d);
     std::cout << board_to_str(&b.data) << "\n";
 
     std::unordered_set<U16> psl_moves;

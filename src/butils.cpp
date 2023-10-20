@@ -122,6 +122,8 @@ std::string move_to_str(U16 move) {
         s += "r";
     }
 
+    if (move == 0) s = "0000"; // null move
+
     return s;
 }
 
