@@ -50,7 +50,7 @@ const state = reactive({
 
 var timer_interval = null;
 
-const INTERVAL = 50;
+const INTERVAL = 10;
 
 function send_message(side, message) {
 
@@ -146,6 +146,8 @@ function reset_game() {
     state.game.move_list.splice(0);
     state.game.position_list.splice(0);
 
+    state.info.left = 'Rollerball v.2.0';
+    state.info.right = 'Rev. Oct 24, 2023';
 }
 
 function on_uciok(side, tokens) {
@@ -165,7 +167,6 @@ function on_newgameok(side, tokens) {
         state.players.white = 'thinking';
         ask_for_move('white');
     }
-        
 }
 
 function ask_for_move(side) {
@@ -208,7 +209,6 @@ function on_bestmove(side, tokens) {
     else {
         stop_game(`Bad side ${side} passed to on_bestmove`);
     }
-
 }
 
 //--- Dependencies ------------------------------------------------------------
@@ -333,18 +333,30 @@ function set_board_type(value) {
     state.game.type = value;
 }
 
-const timer_classes = computed(() => {
+function time_closure(side) {
 
+    return () => {
+        var classes = ['time-left'];
+        if ((state.game.state === 'white_thinking' && side === 'white') ||
+            (state.game.state === 'black_thinking' && side === 'black')) {
+            classes.push('active');
+        }
+        return classes;
+    }
+}
+
+const timer_classes = computed(() => {
     var classes = ['timer'];
     if (!(state.game.state === 'white_thinking' ||
           state.game.state === 'black_thinking' || 
           state.game.state === 'final')) {
         classes.push('hidden');
     }
-
     return classes;
-
 });
+
+const white_timer_classes = computed(time_closure('white'));
+const black_timer_classes = computed(time_closure('black'));
 
 </script>
 
@@ -353,15 +365,15 @@ const timer_classes = computed(() => {
 <form>
     <div class='field-pad'>
         <label for="white_address">White Address:</label>
-        <input id="white_address" v-model="state.sockets.white.address" placeholder="white address">
+        <input id="white_address" v-model="state.sockets.white.address" placeholder="addr:port">
     </div>
     <div class='field-pad'>
         <label for="black_address">Black Address:</label>
-        <input id="black_address" v-model="state.sockets.black.address" placeholder="black address">
+        <input id="black_address" v-model="state.sockets.black.address" placeholder="addr:port">
     </div>
     <div class='field-pad'>
         <label for="time_limit">Time Limit:</label>
-        <input type="number" id="time_limit" v-model.number="state.timer.time_limit" placeholder="time limit">
+        <input type="number" id="time_limit" v-model.number="state.timer.time_limit" placeholder="sec">
     </div>
 </form>
 <div class='button-bar'>
@@ -385,10 +397,10 @@ const timer_classes = computed(() => {
     </div>
 </div>
 <div :class='timer_classes'>
-    <div class='time-left'>White: 
+    <div :class='white_timer_classes'>White: 
         <span class='time'>{{(state.timer.white.time_ms / 1000).toFixed(1)}}</span>
     </div>
-    <div class='time-left'>Black: 
+    <div :class='black_timer_classes'>Black: 
         <span class='time'>{{(state.timer.black.time_ms / 1000).toFixed(1)}}</span>
     </div>
 </div>
@@ -454,6 +466,10 @@ div.time-left {
     font-family: monospace;
     font-weight: bold;
     font-size: 14pt;
+}
+
+.active {
+    color: var(--vt-c-white);
 }
 
 div.book-container {
