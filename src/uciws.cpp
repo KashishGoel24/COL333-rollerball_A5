@@ -137,6 +137,5 @@ void UCIWSServer::on_go(std::vector<std::string>& toks) {
 
 void UCIWSServer::on_quit() {
     std::cout << "In method on_quit\n";
-    std::exit(0);
 }
 

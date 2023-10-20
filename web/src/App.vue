@@ -1,7 +1,7 @@
 <script setup>
 import ChessBoard from 'chessboardjs-vue3';
 import Board from './components/Board.vue'
-import {onMounted, reactive, watch} from 'vue';
+import {onMounted, reactive, watch, computed} from 'vue';
 
 const state = reactive({
 
@@ -68,9 +68,9 @@ function process_message(side, message) {
     var tokens = message.trim().split(' ');
     var command = tokens[0];
 
-    if      (command === 'uciok')        on_uciok(tokens);
-    else if (command === 'ucinewgameok') on_ucinewgameok(tokens);
-    else if (command === 'bestmove')     on_bestmove(tokens);
+    if      (command === 'uciok')        on_uciok(side, tokens);
+    else if (command === 'ucinewgameok') on_ucinewgameok(side, tokens);
+    else if (command === 'bestmove')     on_bestmove(side, tokens);
     else {
         stop_game(`Unknown command ${command} received from ${side}`);
     }
@@ -81,23 +81,23 @@ function connect_socket(side) {
     state.sockets[side].state  = 'connecting';
     state.sockets[side].socket = new WebSocket(`ws://${state.sockets[side].address}`);
 
-    state.sockets[side].onopen = (event) => {
-        state.ws_white.send("uci");
+    state.sockets[side].socket.onopen = (event) => {
+        state.sockets[side].socket.send("uci");
     }
 
-    state.sockets[side].onerror = (err) => {
+    state.sockets[side].socket.onerror = (err) => {
         state.right_info = `Could not connect to ${side} bot`;
         state.sockets[side].state = 'disconnected';
     }
     
-    state.sockets[side].onmessage = (msg) => {
-        state.game.process_uci_command(side, msg.data);
+    state.sockets[side].socket.onmessage = (msg) => {
+        process_message(side, msg.data);
     }
 }
 
 function disconnect_socket(side) {
     state.sockets[side].socket.close();
-    state.sockets[side].socket.state = 'disconnected';
+    state.sockets[side].state = 'disconnected';
 }
 
 function tick() {
@@ -201,248 +201,69 @@ function on_bestmove(side, tokens) {
 
 }
 
-class Game {
+//--- Dependencies ------------------------------------------------------------
 
-    constructor() {
-        this.reset();
+function disable_on_disconnect(s) {
+    if (s === 'disconnected' || s === 'connecting') {
+        state.game.state = 'idle';
     }
+}
 
-    reset() {
+watch(() => state.sockets.white.state, disable_on_disconnect);
+watch(() => state.sockets.black.state, disable_on_disconnect);
 
-        this.curr_player = 'white';
-        this.w_time_left_ms = 0;
-        this.b_time_left_ms = 0;
+//-- UI Stuff ----------------------------------------------------------------- 
 
-        this.player_state = {
-            'white': 'uninitialized',
-            'black': 'uninitialized'
+
+function socket_btn_disabled_closure(side) {
+    return () => {
+        if ((state.game.state === 'idle'  || 
+             state.game.state === 'ready' || 
+             state.game.state === 'final') && 
+             state.sockets[side].state !== 'connecting') {
+            return false;
         }
-
-        this.next_player = {
-            'white': 'black',
-            'black': 'white'
-        }
-
-        this.move_list = []
-        this.position_list = []
-
-        this.over = false;
+        return true;
     }
-    
-    start_stop() {
-        if (!state.in_progress) this.start();
+}
+
+function socket_btn_class_closure(side) {
+
+    return () => {
+        if (state.sockets[side].state === 'connected') return 'button-connected';
+        else if (state.sockets[side].state === 'connecting') return 'button-connecting';
+        else if (state.sockets[side].state === 'disconnected') return 'button-to-connect';
         else {
-            this.stop();
-            this.reset();
+            console.log('ERROR: Invalid socket state');
+            return 'button-to-connect';
         }
     }
+}
 
-    start() {
+function socket_btn_text_closure(side) {
 
-        state.in_progress = true;
-
-        this.w_time_left_ms = state.thinking_time*1000;
-        this.b_time_left_ms = state.thinking_time*1000;
-        state.w_time_left = state.thinking_time;
-        state.b_time_left = state.thinking_time;
-        this.w_timer = setInterval(() => {
-            if (this.player_state['white'] == 'thinking') {
-                if (this.w_time_left_ms < 50) {
-                    state.left_info = 'White ran out of time';
-                    // TODO wait for reset!
-                    this.stop();
-                }
-                this.w_time_left_ms -= 50;
-                var int_time_left = Math.floor(this.w_time_left_ms / 1000);
-                if (int_time_left != state.w_time_left) {
-                    state.w_time_left = int_time_left;
-                }
-            }
-        }, 50);
-        this.b_timer = setInterval(() => {
-            if (this.player_state['black'] == 'thinking') {
-                if (this.b_time_left_ms < 50) {
-                    state.left_info = 'Black ran out of time';
-                    this.stop();
-                }
-                this.b_time_left_ms -= 50;
-                var int_time_left = Math.floor(this.b_time_left_ms / 1000);
-                if (int_time_left != state.b_time_left) {
-                    state.b_time_left = int_time_left;
-                }
-            }
-        }, 50);
-
-        if (this.player_state['white'] === 'uci_initialized' && this.player_state['black'] === 'uci_initialized') {
-            this.dispatch_uci_command('white', `ucinewgame ${state.board_class} ${this.w_time_left_ms}`);
-            this.dispatch_uci_command('black', `ucinewgame ${state.board_class} ${this.b_time_left_ms}`);
-        }
+    return () => {
+        if (state.sockets[side].state === 'connected') return `Disconnect ${side} bot`;
+        else if (state.sockets[side].state === 'connecting') return `Connecting ${side} bot`;
+        else if (state.sockets[side].state === 'disconnected') return `Connect ${side} bot`;
         else {
-            state.left_info = 'Could not start game: one or more UCI engines not initialized';
+            return 'ERROR: Invalid socket state';
         }
-
-    }
-
-    do_move() {
-        var player = this.curr_player;
-        this.dispatch_uci_command(player, 'position startpos moves ' + this.move_list.join(' ')); 
-        if (player == 'white') this.dispatch_uci_command(player, `go ${this.b_time_left_ms}`); 
-        else this.dispatch_uci_command(player, `go ${this.b_time_left_ms}`);
-        this.player_state[player] = 'thinking';
-        // setTimeout(() => {this.dispatch_uci_command(player, 'stop')}, state.thinking_time*1000);
-    }
-
-    process_uci_command(player, command) {
-        
-        console.log(player + " : " + command);
-        var tokens = command.split(" ");
-        if (tokens[0] === 'uciok') {
-            this.player_state[player] = 'uci_initialized';
-        }
-        else if (tokens[0] === 'newgameok') {
-            this.player_state[player] = 'ready';
-
-            if (this.player_state['white'] === 'ready' && this.player_state['black'] === 'ready') {
-                state.game_btn_state = 'started';
-                state.game_btn_text = 'Stop Game';
-                this.do_move();
-            }
-        }
-        else if (tokens[0] === 'info') {
-            state.left_info = player + ":" + tokens.slice(1).join(' ');
-        }
-        else if (tokens[0] === 'bestmove') {
-            if (this.curr_player === player) {
-                // do move
-                this.player_state[this.curr_player] = 'ready';
-                var move = tokens[1];
-
-                this.curr_player = this.next_player[player];
-
-                state.game_moves.push(move);
-                this.move_list.push(move);
-                // this.position_list.push(this.board.fen());
-
-                if (this.move_list.length >= 200) {
-                    state.left_info = "Game truncated at 100 moves";
-                    this.stop();
-                }
-                // else if (this.position_list.filter(x => x === this.board.fen()).length >= 3) {
-                //     // threefold repetition
-                //     state.left_info = "Game drawn by threefold repetition";
-                //     this.stop();
-                // }
-                else if (this.player_state[this.curr_player] === 'ready') {
-                    this.do_move();
-                }
-            }
-            else {
-                state.left_info = 'ERROR: received an out-of-place move from ' + player;
-            }
-        }
-    }
-
-    dispatch_uci_command(player, command) {
-        
-        if (player === 'white') {
-            state.ws_white.send(command);
-        }
-        else if (player === 'black') {
-            state.ws_black.send(command);
-        }
-
-    }
-
-    stop() {
-        this.dispatch_uci_command('white', 'quit');
-        this.dispatch_uci_command('black', 'quit');
-
-        state.ws_white.close();
-        state.ws_black.close();
-
-        state.game_btn_state = 'button-to-start';
-        state.game_btn_text = 'Start Game';
-
-        state.w_conn_btn_state = 'button-to-connect';
-        state.w_conn_btn_text  = 'Connect White Bot';
-        state.b_conn_btn_state = 'button-to-connect';
-        state.b_conn_btn_text  = 'Connect Black Bot';
-
-        clearInterval(this.w_timer);
-        clearInterval(this.b_timer);
-        state.w_time_left = 0;
-        state.b_time_left = 0;
-
-        this.over = true;
-        state.in_progress = false;
     }
 }
 
-onMounted(() => {
-    state.game = new Game();
-});
+const white_socket_btn_disabled = computed(socket_btn_disabled_closure('white'));
+const black_socket_btn_disabled = computed(socket_btn_disabled_closure('black'));
 
-function connect_white() {
-    console.log("Connecting to white\n");
+const white_socket_btn_class = computed(socket_btn_class_closure('white'));
+const black_socket_btn_class = computed(socket_btn_class_closure('black'));
 
-    state.w_conn_btn_state = 'button-connecting';
-    state.w_conn_btn_text = 'Connecting White Bot';
-    state.ws_white = new WebSocket(`ws://${state.white_address}`);
+const white_socket_btn_text = computed(socket_btn_text_closure('white'));
+const black_socket_btn_text = computed(socket_btn_text_closure('black'));
 
-    state.ws_white.onopen = (event) => {
-        state.ws_white.send("uci");
-        state.w_conn_btn_state = 'button-connected';
-        state.w_conn_btn_text = 'Connected to White Bot';
-        console.log("Connected\n");
-    }
-
-    state.ws_white.onerror = (err) => {
-        state.right_info = 'Could not connect to white bot';
-        state.w_conn_btn_state = 'button-to-connect';
-        state.w_conn_btn_text = 'Connect White Bot';
-    }
-    
-    state.ws_white.onmessage = (msg) => {
-        state.game.process_uci_command('white', msg.data);
-    }
-
-}
-
-function connect_black() {
-    console.log("Connecting to black\n");
-
-    state.b_conn_btn_state = 'button-connecting';
-    state.b_conn_btn_text = 'Connecting Black Bot';
-    state.ws_black = new WebSocket(`ws://${state.black_address}`);
-
-    state.ws_black.onopen = (event) => {
-        state.ws_black.send("uci");
-        state.b_conn_btn_state = 'button-connected';
-        state.b_conn_btn_text = 'Connected to Black Bot';
-        console.log("Connected\n");
-    }
-
-    state.ws_black.onerror = (err) => {
-        state.right_info = 'Could not connect to black bot';
-        state.b_conn_btn_state = 'button-to-connect';
-        state.b_conn_btn_text = 'Connect Black Bot';
-    }
-
-    state.ws_black.onmessage = (msg) => {
-        state.game.process_uci_command('black', msg.data);
-    }
-}
-
-function set_7_3_board() {
-    state.board_class = 'board-7-3';
-}
-
-function set_8_4_board() {
-    state.board_class = 'board-8-4';
-}
-
-function set_8_2_board() {
-    state.board_class = 'board-8-2';
+function socket_btn_click(side) {
+    if (state.sockets[side].state === 'connected') disconnect_socket(side);
+    else connect_socket(side);
 }
 
 </script>
@@ -452,28 +273,42 @@ function set_8_2_board() {
 <form>
     <div class='field-pad'>
         <label for="white_address">White Address:</label>
-        <input id="white_address" v-model="state.white_address" placeholder="white address">
+        <input id="white_address" v-model="state.sockets.white.address" placeholder="white address">
     </div>
     <div class='field-pad'>
         <label for="black_address">Black Address:</label>
-        <input id="black_address" v-model="state.black_address" placeholder="black address">
+        <input id="black_address" v-model="state.sockets.black.address" placeholder="black address">
     </div>
     <div class='field-pad'>
-        <label for="thinking_time">Time per side:</label>
-        <input type="number" id="thinking_time" v-model.number="state.thinking_time" placeholder="thinking time">
+        <label for="time_limit">Time Limit:</label>
+        <input type="number" id="time_limit" v-model.number="state.timer.time_limit" placeholder="time limit">
     </div>
 </form>
 <div class='button-bar'>
-    <div class='button-enclose'><button :disabled='state.in_progress' :class='state.w_conn_btn_state' @click="connect_white" v-html="state.w_conn_btn_text"></button></div>
-    <div class='button-enclose'><button :disabled='state.in_progress' :class='state.b_conn_btn_state' @click="connect_black" v-html="state.b_conn_btn_text"></button></div>
-    <div class='button-enclose'><button :class='state.game_btn_state' @click="state.game.start_stop" v-html="state.game_btn_text"></button></div>
+    <div class='button-enclose'>
+        <button :disabled='white_socket_btn_disabled' 
+                :class='white_socket_btn_class' 
+                @click="socket_btn_click('white')" 
+                v-html="white_socket_btn_text"></button>
+    </div>
+    <div class='button-enclose'>
+        <button :disabled='black_socket_btn_disabled' 
+                :class='black_socket_btn_class' 
+                @click="socket_btn_click('black')" 
+                v-html="black_socket_btn_text"></button>
+    </div>
+    <div class='button-enclose'>
+        <button :class='state.game_btn_state' 
+                @click="state.game.start_stop" 
+                v-html="state.game_btn_text"></button>
+    </div>
 </div>
 <div class='timer'>
-    <div class='time-left'>White: {{state.w_time_left}}</div>
-    <div class='time-left'>Black: {{state.b_time_left}}</div>
+    <div class='time-left'>White: {{Math.ceil(state.timer.white.time_ms / 1000)}}</div>
+    <div class='time-left'>Black: {{Math.ceil(state.timer.black.time_ms / 1000)}}</div>
 </div>
 
-<Board ref='board' :type='state.board_class' :moves="state.game !== null ? state.game.move_list : []" id='myBoard'/>
+<Board ref='board' :type='state.game.type' :moves="state.game.move_list" id='myBoard'/>
 
 <div class='button-bar'>
     <div class='button-enclose'><button :disabled='state.in_progress' class='button-to-start' @click="set_7_3_board">7_3 board</button></div>
