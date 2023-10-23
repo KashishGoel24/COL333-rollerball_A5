@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
 
     // Board b(EIGHT_TWO);
 
-    d.board_type = EIGHT_FOUR;
+    d.board_type = EIGHT_TWO;
     d.set_8x8_transforms();
     d.board_mask = (U8*)board_8_4;
     d.b_pawn_1 = pos(3,1);
