@@ -7,6 +7,9 @@
 
 std::unordered_set<U16> transform_moves(const std::unordered_set<U16>& moves, const U8 *transform) {
 
+    for (auto move : moves) std::cout << move << " ";
+    std::cout << std::endl;
+
     std::unordered_set<U16> rot_moves;
 
     for (U16 move : moves) {
@@ -326,9 +329,6 @@ std::unordered_set<U16> Board::get_legal_moves() const {
 
         if (!c.in_check()) {
             legal_moves.insert(move);
-        }
-        else {
-            std::cout << "Move " << move_to_str(move) << " is illegal" << std::endl;
         }
 
         c.undo_last_move_without_flip_(move);

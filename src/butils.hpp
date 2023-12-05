@@ -65,3 +65,4 @@ std::string board_to_str(const BoardData *b);
 */
 std::string board_7_3_to_str(const U8 *b);
 
+std::string player_to_play_to_str(const Board& b);
